@@ -1,0 +1,22 @@
+[
+  {
+    "fileName": "main-overview.mdc",
+    "description": "Complete system overview covering the core architecture, key components, and integration between the authentication system, TRPC API layer, and database using Kysely"
+  },
+  {
+    "fileName": "crispr-algorithms.mdc",
+    "description": "Detailed documentation of the CRISPR guide RNA design algorithms, including GC content calculation, PAM site identification, scoring mechanisms and filtering logic"
+  },
+  {
+    "fileName": "data-models.mdc",
+    "description": "Documentation of database schema, data models and their relationships implemented through Kysely, focusing on user authentication and domain-specific models"
+  },
+  {
+    "fileName": "smart-polling.mdc",
+    "description": "Technical documentation of the smart polling system implementation, including state management, interval calculations and activity detection algorithms"
+  },
+  {
+    "fileName": "trpc-architecture.mdc",
+    "description": "Documentation of the type-safe API architecture using TRPC, including procedure definitions, middleware implementation, error handling and client-server communication flow"
+  }
+]
