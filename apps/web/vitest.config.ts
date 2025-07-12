@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     include: ['./tests/**/*.{test,spec}.{js,ts,jsx,tsx}'],
+    exclude: ['./tests/e2e/**/*', './node_modules/**/*'],
     environment: 'node',
     globals: true,
     setupFiles: ['./tests/setup.ts'],
