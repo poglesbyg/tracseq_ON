@@ -1,5 +1,12 @@
 {
   "extends": "@ocavue/tsconfig/dom/app.json",
+  "include": ["src/**/*", "*.ts", "*.js"],
+  "exclude": ["dist", "node_modules"],
+  "compilerOptions": {
+    "types": ["vitest/globals", "node"],
+    "outDir": "./dist",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+  },
   "references": [
     {
       "path": "../db/tsconfig.json"
