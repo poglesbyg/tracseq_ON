@@ -1,16 +1,16 @@
 'use client'
 
-import { 
-  ZoomIn, 
-  ZoomOut, 
-  RotateCw, 
-  ChevronLeft, 
-  ChevronRight, 
+import {
+  ZoomIn,
+  ZoomOut,
+  RotateCw,
+  ChevronLeft,
+  ChevronRight,
   Download,
   Eye,
   FileText,
   Brain,
-  AlertCircle
+  AlertCircle,
 } from 'lucide-react'
 import { useState, useCallback, useEffect } from 'react'
 
@@ -32,7 +32,12 @@ interface PDFViewerProps {
   onClose?: () => void
 }
 
-export default function PDFViewer({ file, extractedData, isProcessing = false, onClose }: PDFViewerProps) {
+export default function PDFViewer({
+  file,
+  extractedData,
+  isProcessing = false,
+  onClose,
+}: PDFViewerProps) {
   const [numPages, setNumPages] = useState<number>(0)
   const [pageNumber, setPageNumber] = useState<number>(1)
   const [scale, setScale] = useState<number>(1.0)
@@ -44,17 +49,17 @@ export default function PDFViewer({ file, extractedData, isProcessing = false, o
   // Initialize PDF.js on client side only
   useEffect(() => {
     setIsClient(true)
-    
+
     const loadPdfJs = async () => {
       try {
         const pdfModule = await import('react-pdf')
         Document = pdfModule.Document
         Page = pdfModule.Page
         pdfjs = pdfModule.pdfjs
-        
+
         // Configure PDF.js worker
         pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`
-        
+
         setPdfLoaded(true)
       } catch (error) {
         console.error('Failed to load PDF.js:', error)
@@ -65,40 +70,43 @@ export default function PDFViewer({ file, extractedData, isProcessing = false, o
     void loadPdfJs()
   }, [])
 
-  const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
-    setNumPages(numPages)
-    setError(null)
-  }, [])
+  const onDocumentLoadSuccess = useCallback(
+    ({ numPages }: { numPages: number }) => {
+      setNumPages(numPages)
+      setError(null)
+    },
+    [],
+  )
 
   const onDocumentLoadError = useCallback((error: Error) => {
     setError(`Failed to load PDF: ${error.message}`)
   }, [])
 
   const goToPrevPage = useCallback(() => {
-    setPageNumber(prev => Math.max(1, prev - 1))
+    setPageNumber((prev) => Math.max(1, prev - 1))
   }, [])
 
   const goToNextPage = useCallback(() => {
-    setPageNumber(prev => Math.min(numPages, prev + 1))
+    setPageNumber((prev) => Math.min(numPages, prev + 1))
   }, [numPages])
 
   const zoomIn = useCallback(() => {
-    setScale(prev => Math.min(3.0, prev + 0.2))
+    setScale((prev) => Math.min(3.0, prev + 0.2))
   }, [])
 
   const zoomOut = useCallback(() => {
-    setScale(prev => Math.max(0.5, prev - 0.2))
+    setScale((prev) => Math.max(0.5, prev - 0.2))
   }, [])
 
   const rotate = useCallback(() => {
-    setRotation(prev => (prev + 90) % 360)
+    setRotation((prev) => (prev + 90) % 360)
   }, [])
 
   const downloadFile = useCallback(() => {
     if (!isClient) {
       return
     }
-    
+
     const url = URL.createObjectURL(file)
     const a = document.createElement('a')
     a.href = url
@@ -110,8 +118,12 @@ export default function PDFViewer({ file, extractedData, isProcessing = false, o
   }, [file, isClient])
 
   const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.8) {return 'bg-green-100 text-green-800'}
-    if (confidence >= 0.6) {return 'bg-yellow-100 text-yellow-800'}
+    if (confidence >= 0.8) {
+      return 'bg-green-100 text-green-800'
+    }
+    if (confidence >= 0.6) {
+      return 'bg-yellow-100 text-yellow-800'
+    }
     return 'bg-red-100 text-red-800'
   }
 
@@ -122,7 +134,12 @@ export default function PDFViewer({ file, extractedData, isProcessing = false, o
       case 'pattern':
         return <FileText className="h-4 w-4" />
       case 'hybrid':
-        return <><Brain className="h-3 w-3" /><FileText className="h-3 w-3" /></>
+        return (
+          <>
+            <Brain className="h-3 w-3" />
+            <FileText className="h-3 w-3" />
+          </>
+        )
       default:
         return <FileText className="h-4 w-4" />
     }
@@ -157,7 +174,7 @@ export default function PDFViewer({ file, extractedData, isProcessing = false, o
               {(file.size / 1024 / 1024).toFixed(2)} MB
             </Badge>
           </div>
-          
+
           <div className="flex items-center space-x-2">
             <Button
               variant="outline"
@@ -201,13 +218,23 @@ export default function PDFViewer({ file, extractedData, isProcessing = false, o
           </div>
 
           <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm" onClick={zoomOut} disabled={scale <= 0.5}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={zoomOut}
+              disabled={scale <= 0.5}
+            >
               <ZoomOut className="h-4 w-4" />
             </Button>
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[60px] text-center">
               {Math.round(scale * 100)}%
             </span>
-            <Button variant="outline" size="sm" onClick={zoomIn} disabled={scale >= 3.0}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={zoomIn}
+              disabled={scale >= 3.0}
+            >
               <ZoomIn className="h-4 w-4" />
             </Button>
             <Separator orientation="vertical" className="h-6" />
@@ -226,7 +253,8 @@ export default function PDFViewer({ file, extractedData, isProcessing = false, o
                 <span>{error}</span>
               </div>
             ) : (
-              Document && Page && (
+              Document &&
+              Page && (
                 <Document
                   file={file}
                   onLoadSuccess={onDocumentLoadSuccess}
@@ -282,37 +310,55 @@ export default function PDFViewer({ file, extractedData, isProcessing = false, o
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Method:</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Method:
+                    </span>
                     <div className="flex items-center space-x-1">
                       {getMethodIcon(extractedData.extractionMethod)}
                       <span className="text-sm font-medium capitalize">
                         {extractedData.extractionMethod}
                       </span>
                       {extractedData.extractionMethod === 'rag' && (
-                        <Badge variant="outline" className="ml-1 text-xs bg-purple-100 text-purple-800">
+                        <Badge
+                          variant="outline"
+                          className="ml-1 text-xs bg-purple-100 text-purple-800"
+                        >
                           AI Enhanced
                         </Badge>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Confidence:</span>
-                    <Badge className={getConfidenceColor(extractedData.confidence)}>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Confidence:
+                    </span>
+                    <Badge
+                      className={getConfidenceColor(extractedData.confidence)}
+                    >
                       {Math.round(extractedData.confidence * 100)}%
                     </Badge>
                   </div>
                   {extractedData.processingTime && (
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Processing Time:</span>
-                      <span className="text-sm font-medium">{extractedData.processingTime}ms</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Processing Time:
+                      </span>
+                      <span className="text-sm font-medium">
+                        {extractedData.processingTime}ms
+                      </span>
                     </div>
                   )}
                   {extractedData.issues && extractedData.issues.length > 0 && (
                     <div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Issues:</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Issues:
+                      </span>
                       <ul className="mt-1 space-y-1">
                         {extractedData.issues.map((issue, index) => (
-                          <li key={index} className="flex items-center space-x-2 text-sm text-amber-600">
+                          <li
+                            key={index}
+                            className="flex items-center space-x-2 text-sm text-amber-600"
+                          >
                             <AlertCircle className="h-3 w-3" />
                             <span>{issue}</span>
                           </li>
@@ -334,27 +380,45 @@ export default function PDFViewer({ file, extractedData, isProcessing = false, o
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Field Matches:</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Field Matches:
+                      </span>
                       <span className="text-sm font-medium">
                         {extractedData.ragInsights.matches.length} found
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Overall Confidence:</span>
-                      <Badge className={getConfidenceColor(extractedData.ragInsights.overallConfidence)}>
-                        {Math.round(extractedData.ragInsights.overallConfidence * 100)}%
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Overall Confidence:
+                      </span>
+                      <Badge
+                        className={getConfidenceColor(
+                          extractedData.ragInsights.overallConfidence,
+                        )}
+                      >
+                        {Math.round(
+                          extractedData.ragInsights.overallConfidence * 100,
+                        )}
+                        %
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Extracted Fields:</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Extracted Fields:
+                      </span>
                       <span className="text-sm font-medium">
-                        {extractedData.ragInsights.extractedFields} / {extractedData.ragInsights.totalFields}
+                        {extractedData.ragInsights.extractedFields} /{' '}
+                        {extractedData.ragInsights.totalFields}
                       </span>
                     </div>
                     {extractedData.ragInsights.processingTime && (
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">RAG Time:</span>
-                        <span className="text-sm font-medium">{extractedData.ragInsights.processingTime}ms</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          RAG Time:
+                        </span>
+                        <span className="text-sm font-medium">
+                          {extractedData.ragInsights.processingTime}ms
+                        </span>
                       </div>
                     )}
                   </CardContent>
@@ -362,26 +426,34 @@ export default function PDFViewer({ file, extractedData, isProcessing = false, o
               )}
 
               {/* RAG Recommendations */}
-              {extractedData.ragRecommendations && extractedData.ragRecommendations.length > 0 && (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center space-x-2">
-                      <AlertCircle className="h-4 w-4 text-blue-600" />
-                      <span>Recommendations</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2">
-                      {extractedData.ragRecommendations.map((recommendation, index) => (
-                        <li key={index} className="flex items-start space-x-2 text-sm">
-                          <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                          <span className="text-gray-700 dark:text-gray-300">{recommendation}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              )}
+              {extractedData.ragRecommendations &&
+                extractedData.ragRecommendations.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center space-x-2">
+                        <AlertCircle className="h-4 w-4 text-blue-600" />
+                        <span>Recommendations</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2">
+                        {extractedData.ragRecommendations.map(
+                          (recommendation, index) => (
+                            <li
+                              key={index}
+                              className="flex items-start space-x-2 text-sm"
+                            >
+                              <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
+                              <span className="text-gray-700 dark:text-gray-300">
+                                {recommendation}
+                              </span>
+                            </li>
+                          ),
+                        )}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
 
               {/* Basic Information */}
               <Card>
@@ -391,32 +463,52 @@ export default function PDFViewer({ file, extractedData, isProcessing = false, o
                 <CardContent className="space-y-2">
                   {extractedData.sampleName && (
                     <div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Sample Name:</span>
-                      <p className="text-sm font-medium">{extractedData.sampleName}</p>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Sample Name:
+                      </span>
+                      <p className="text-sm font-medium">
+                        {extractedData.sampleName}
+                      </p>
                     </div>
                   )}
                   {extractedData.submitterName && (
                     <div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Submitter:</span>
-                      <p className="text-sm font-medium">{extractedData.submitterName}</p>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Submitter:
+                      </span>
+                      <p className="text-sm font-medium">
+                        {extractedData.submitterName}
+                      </p>
                     </div>
                   )}
                   {extractedData.submitterEmail && (
                     <div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Email:</span>
-                      <p className="text-sm font-medium">{extractedData.submitterEmail}</p>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Email:
+                      </span>
+                      <p className="text-sm font-medium">
+                        {extractedData.submitterEmail}
+                      </p>
                     </div>
                   )}
                   {extractedData.labName && (
                     <div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Lab:</span>
-                      <p className="text-sm font-medium">{extractedData.labName}</p>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Lab:
+                      </span>
+                      <p className="text-sm font-medium">
+                        {extractedData.labName}
+                      </p>
                     </div>
                   )}
                   {extractedData.projectName && (
                     <div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Project:</span>
-                      <p className="text-sm font-medium">{extractedData.projectName}</p>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Project:
+                      </span>
+                      <p className="text-sm font-medium">
+                        {extractedData.projectName}
+                      </p>
                     </div>
                   )}
                 </CardContent>
@@ -430,26 +522,42 @@ export default function PDFViewer({ file, extractedData, isProcessing = false, o
                 <CardContent className="space-y-2">
                   {extractedData.sequencingType && (
                     <div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Type:</span>
-                      <Badge variant="outline" className="ml-2">{extractedData.sequencingType}</Badge>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Type:
+                      </span>
+                      <Badge variant="outline" className="ml-2">
+                        {extractedData.sequencingType}
+                      </Badge>
                     </div>
                   )}
                   {extractedData.sampleType && (
                     <div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Sample Type:</span>
-                      <Badge variant="outline" className="ml-2">{extractedData.sampleType}</Badge>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Sample Type:
+                      </span>
+                      <Badge variant="outline" className="ml-2">
+                        {extractedData.sampleType}
+                      </Badge>
                     </div>
                   )}
                   {extractedData.libraryType && (
                     <div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Library:</span>
-                      <Badge variant="outline" className="ml-2">{extractedData.libraryType}</Badge>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Library:
+                      </span>
+                      <Badge variant="outline" className="ml-2">
+                        {extractedData.libraryType}
+                      </Badge>
                     </div>
                   )}
                   {extractedData.flowCellType && (
                     <div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Flow Cell:</span>
-                      <Badge variant="outline" className="ml-2">{extractedData.flowCellType}</Badge>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Flow Cell:
+                      </span>
+                      <Badge variant="outline" className="ml-2">
+                        {extractedData.flowCellType}
+                      </Badge>
                     </div>
                   )}
                 </CardContent>
@@ -463,26 +571,42 @@ export default function PDFViewer({ file, extractedData, isProcessing = false, o
                 <CardContent className="space-y-2">
                   {extractedData.concentration && (
                     <div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Concentration:</span>
-                      <p className="text-sm font-medium">{extractedData.concentration}</p>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Concentration:
+                      </span>
+                      <p className="text-sm font-medium">
+                        {extractedData.concentration}
+                      </p>
                     </div>
                   )}
                   {extractedData.volume && (
                     <div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Volume:</span>
-                      <p className="text-sm font-medium">{extractedData.volume}</p>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Volume:
+                      </span>
+                      <p className="text-sm font-medium">
+                        {extractedData.volume}
+                      </p>
                     </div>
                   )}
                   {extractedData.purity && (
                     <div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Purity:</span>
-                      <p className="text-sm font-medium">{extractedData.purity}</p>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Purity:
+                      </span>
+                      <p className="text-sm font-medium">
+                        {extractedData.purity}
+                      </p>
                     </div>
                   )}
                   {extractedData.fragmentSize && (
                     <div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Fragment Size:</span>
-                      <p className="text-sm font-medium">{extractedData.fragmentSize}</p>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Fragment Size:
+                      </span>
+                      <p className="text-sm font-medium">
+                        {extractedData.fragmentSize}
+                      </p>
                     </div>
                   )}
                 </CardContent>
@@ -496,9 +620,15 @@ export default function PDFViewer({ file, extractedData, isProcessing = false, o
                 <CardContent className="space-y-2">
                   {extractedData.priority && (
                     <div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Priority:</span>
-                      <Badge 
-                        variant={extractedData.priority === 'Rush' ? 'destructive' : 'outline'} 
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Priority:
+                      </span>
+                      <Badge
+                        variant={
+                          extractedData.priority === 'Rush'
+                            ? 'destructive'
+                            : 'outline'
+                        }
                         className="ml-2"
                       >
                         {extractedData.priority}
@@ -507,15 +637,23 @@ export default function PDFViewer({ file, extractedData, isProcessing = false, o
                   )}
                   {extractedData.basecalling && (
                     <div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Basecalling:</span>
-                      <Badge variant="outline" className="ml-2">{extractedData.basecalling}</Badge>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Basecalling:
+                      </span>
+                      <Badge variant="outline" className="ml-2">
+                        {extractedData.basecalling}
+                      </Badge>
                     </div>
                   )}
                   {extractedData.demultiplexing !== undefined && (
                     <div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Demultiplexing:</span>
-                      <Badge 
-                        variant={extractedData.demultiplexing ? 'default' : 'outline'} 
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Demultiplexing:
+                      </span>
+                      <Badge
+                        variant={
+                          extractedData.demultiplexing ? 'default' : 'outline'
+                        }
                         className="ml-2"
                       >
                         {extractedData.demultiplexing ? 'Yes' : 'No'}
@@ -526,7 +664,9 @@ export default function PDFViewer({ file, extractedData, isProcessing = false, o
               </Card>
 
               {/* Bioinformatics */}
-              {(extractedData.referenceGenome || extractedData.analysisType || extractedData.dataDelivery) && (
+              {(extractedData.referenceGenome ||
+                extractedData.analysisType ||
+                extractedData.dataDelivery) && (
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm">Bioinformatics</CardTitle>
@@ -534,20 +674,32 @@ export default function PDFViewer({ file, extractedData, isProcessing = false, o
                   <CardContent className="space-y-2">
                     {extractedData.referenceGenome && (
                       <div>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Reference:</span>
-                        <p className="text-sm font-medium">{extractedData.referenceGenome}</p>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          Reference:
+                        </span>
+                        <p className="text-sm font-medium">
+                          {extractedData.referenceGenome}
+                        </p>
                       </div>
                     )}
                     {extractedData.analysisType && (
                       <div>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Analysis:</span>
-                        <p className="text-sm font-medium">{extractedData.analysisType}</p>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          Analysis:
+                        </span>
+                        <p className="text-sm font-medium">
+                          {extractedData.analysisType}
+                        </p>
                       </div>
                     )}
                     {extractedData.dataDelivery && (
                       <div>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Data Delivery:</span>
-                        <p className="text-sm font-medium">{extractedData.dataDelivery}</p>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          Data Delivery:
+                        </span>
+                        <p className="text-sm font-medium">
+                          {extractedData.dataDelivery}
+                        </p>
                       </div>
                     )}
                   </CardContent>
@@ -566,4 +718,4 @@ export default function PDFViewer({ file, extractedData, isProcessing = false, o
       </div>
     </div>
   )
-} 
+}

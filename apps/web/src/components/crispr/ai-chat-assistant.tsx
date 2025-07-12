@@ -1,14 +1,14 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  MessageCircle, 
-  Send, 
-  Bot, 
-  User, 
+import {
+  MessageCircle,
+  Send,
+  Bot,
+  User,
   Loader2,
   Sparkles,
   Brain,
   Trash2,
-  Copy
+  Copy,
 } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 
@@ -41,9 +41,10 @@ export function AIChatAssistant({ context, className }: AIChatAssistantProps) {
     {
       id: 'welcome',
       role: 'assistant',
-      content: 'Hello! I\'m your AI CRISPR assistant. Ask me anything about guide RNA design, experimental protocols, troubleshooting, or CRISPR methodology. How can I help you today?',
-      timestamp: new Date()
-    }
+      content:
+        "Hello! I'm your AI CRISPR assistant. Ask me anything about guide RNA design, experimental protocols, troubleshooting, or CRISPR methodology. How can I help you today?",
+      timestamp: new Date(),
+    },
   ])
   const [inputMessage, setInputMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
@@ -68,33 +69,37 @@ export function AIChatAssistant({ context, className }: AIChatAssistantProps) {
       id: Date.now().toString(),
       role: 'user',
       content: inputMessage.trim(),
-      timestamp: new Date()
+      timestamp: new Date(),
     }
 
-    setMessages(prev => [...prev, userMessage])
+    setMessages((prev) => [...prev, userMessage])
     setInputMessage('')
     setIsTyping(true)
 
     try {
-      const response = await aiService.answerQuestion(userMessage.content, context)
-      
+      const response = await aiService.answerQuestion(
+        userMessage.content,
+        context,
+      )
+
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: response,
-        timestamp: new Date()
+        timestamp: new Date(),
       }
 
-      setMessages(prev => [...prev, assistantMessage])
+      setMessages((prev) => [...prev, assistantMessage])
     } catch (error) {
       console.error('AI chat failed:', error)
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'I apologize, but I\'m having trouble processing your question right now. Please try again or check if Ollama is running.',
-        timestamp: new Date()
+        content:
+          "I apologize, but I'm having trouble processing your question right now. Please try again or check if Ollama is running.",
+        timestamp: new Date(),
       }
-      setMessages(prev => [...prev, errorMessage])
+      setMessages((prev) => [...prev, errorMessage])
     } finally {
       setIsTyping(false)
     }
@@ -112,9 +117,10 @@ export function AIChatAssistant({ context, className }: AIChatAssistantProps) {
       {
         id: 'welcome',
         role: 'assistant',
-        content: 'Chat cleared! How can I help you with your CRISPR experiment?',
-        timestamp: new Date()
-      }
+        content:
+          'Chat cleared! How can I help you with your CRISPR experiment?',
+        timestamp: new Date(),
+      },
     ])
   }
 
@@ -125,11 +131,11 @@ export function AIChatAssistant({ context, className }: AIChatAssistantProps) {
   }
 
   const quickQuestions = [
-    "How do I improve guide RNA efficiency?",
-    "What causes off-target effects?",
-    "Best practices for CRISPR delivery?",
-    "How to validate knockout experiments?",
-    "Troubleshooting low editing efficiency"
+    'How do I improve guide RNA efficiency?',
+    'What causes off-target effects?',
+    'Best practices for CRISPR delivery?',
+    'How to validate knockout experiments?',
+    'Troubleshooting low editing efficiency',
   ]
 
   const handleQuickQuestion = (question: string) => {
@@ -171,14 +177,19 @@ export function AIChatAssistant({ context, className }: AIChatAssistantProps) {
                 <Brain className="h-5 w-5 text-white" />
               </div>
               <div>
-                <CardTitle className="text-white text-lg">AI Assistant</CardTitle>
+                <CardTitle className="text-white text-lg">
+                  AI Assistant
+                </CardTitle>
                 <CardDescription className="text-slate-400 text-sm">
                   CRISPR Expert
                 </CardDescription>
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Badge variant="outline" className="border-green-500/50 text-green-400">
+              <Badge
+                variant="outline"
+                className="border-green-500/50 text-green-400"
+              >
                 <Sparkles className="h-3 w-3 mr-1" />
                 Online
               </Badge>
@@ -206,21 +217,30 @@ export function AIChatAssistant({ context, className }: AIChatAssistantProps) {
                   exit={{ opacity: 0, y: -10 }}
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className={`flex items-start space-x-2 max-w-[85%] ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                    <div className={`p-2 rounded-full ${message.role === 'user' ? 'bg-purple-600' : 'bg-slate-700'}`}>
+                  <div
+                    className={`flex items-start space-x-2 max-w-[85%] ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}
+                  >
+                    <div
+                      className={`p-2 rounded-full ${message.role === 'user' ? 'bg-purple-600' : 'bg-slate-700'}`}
+                    >
                       {message.role === 'user' ? (
                         <User className="h-4 w-4 text-white" />
                       ) : (
                         <Bot className="h-4 w-4 text-white" />
                       )}
                     </div>
-                    <div className={`p-3 rounded-lg ${message.role === 'user' ? 'bg-purple-600 text-white' : 'bg-white/10 text-slate-100'}`}>
+                    <div
+                      className={`p-3 rounded-lg ${message.role === 'user' ? 'bg-purple-600 text-white' : 'bg-white/10 text-slate-100'}`}
+                    >
                       <p className="text-sm leading-relaxed whitespace-pre-wrap">
                         {message.content}
                       </p>
                       <div className="flex items-center justify-between mt-2">
                         <span className="text-xs opacity-70">
-                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {message.timestamp.toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
                         </span>
                         {message.role === 'assistant' && (
                           <div className="flex items-center space-x-1">
@@ -254,8 +274,14 @@ export function AIChatAssistant({ context, className }: AIChatAssistantProps) {
                   <div className="p-3 rounded-lg bg-white/10">
                     <div className="flex space-x-1">
                       <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                      <div
+                        className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"
+                        style={{ animationDelay: '0.1s' }}
+                      />
+                      <div
+                        className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"
+                        style={{ animationDelay: '0.2s' }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -323,4 +349,4 @@ export function AIChatAssistant({ context, className }: AIChatAssistantProps) {
       </Card>
     </motion.div>
   )
-} 
+}

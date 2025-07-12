@@ -1,6 +1,5 @@
 'use client'
 
-import { GalleryVerticalEnd } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { signIn } from '@/client/auth-client'
@@ -46,12 +45,20 @@ export function SignIn() {
 
   return (
     <div className={cn('flex flex-col items-center gap-6 w-full max-w-md')}>
-      {/* Company Logo/Name */}
-      <div className="flex items-center gap-2 self-center font-medium">
-        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-          <GalleryVerticalEnd className="size-4" />
+      {/* UNC Logo/Name */}
+      <div className="flex items-center gap-3 self-center font-medium">
+        {/* UNC Old Well Icon */}
+        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+          <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center">
+            <div className="w-3 h-3 bg-primary rounded-full"></div>
+          </div>
         </div>
-        Monorepo scaffold
+        <div className="flex flex-col">
+          <div className="text-sm text-muted-foreground font-medium">
+            The University of North Carolina at Chapel Hill
+          </div>
+          <div className="text-lg font-bold text-foreground">TracSeq ON</div>
+        </div>
       </div>
 
       {/* Sign In Card */}

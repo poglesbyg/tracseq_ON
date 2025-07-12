@@ -1,18 +1,21 @@
 import { motion } from 'framer-motion'
-import { 
-  Sparkles, 
-  TrendingUp, 
-  AlertTriangle, 
-  CheckCircle, 
+import {
+  Sparkles,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle,
   Loader2,
   Lightbulb,
   Zap,
   ArrowRight,
-  RotateCcw
+  RotateCcw,
 } from 'lucide-react'
 import { useState } from 'react'
 
-import { aiService, type GuideOptimizationResult } from '../../lib/ai/ollama-service'
+import {
+  aiService,
+  type GuideOptimizationResult,
+} from '../../lib/ai/ollama-service'
 import type { GuideRNA } from '../../lib/crispr/guide-design'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
@@ -30,22 +33,23 @@ interface AIGuideOptimizerProps {
   onOptimizationComplete?: (result: GuideOptimizationResult) => void
 }
 
-export function AIGuideOptimizer({ 
-  guide, 
-  targetSequence, 
-  onOptimizationComplete 
+export function AIGuideOptimizer({
+  guide,
+  targetSequence,
+  onOptimizationComplete,
 }: AIGuideOptimizerProps) {
-  const [optimization, setOptimization] = useState<GuideOptimizationResult | null>(null)
+  const [optimization, setOptimization] =
+    useState<GuideOptimizationResult | null>(null)
   const [isOptimizing, setIsOptimizing] = useState(false)
 
   const performOptimization = async () => {
     setIsOptimizing(true)
-    
+
     try {
       const result = await aiService.optimizeGuideRNA(
-        guide.sequence, 
-        targetSequence, 
-        guide.pamSequence
+        guide.sequence,
+        targetSequence,
+        guide.pamSequence,
       )
       setOptimization(result)
       onOptimizationComplete?.(result)
@@ -57,14 +61,22 @@ export function AIGuideOptimizer({
   }
 
   const getRiskColor = (riskLevel: string) => {
-    if (riskLevel.toLowerCase().includes('low')) {return 'text-green-400'}
-    if (riskLevel.toLowerCase().includes('moderate')) {return 'text-yellow-400'}
+    if (riskLevel.toLowerCase().includes('low')) {
+      return 'text-green-400'
+    }
+    if (riskLevel.toLowerCase().includes('moderate')) {
+      return 'text-yellow-400'
+    }
     return 'text-red-400'
   }
 
   const getRiskIcon = (riskLevel: string) => {
-    if (riskLevel.toLowerCase().includes('low')) {return CheckCircle}
-    if (riskLevel.toLowerCase().includes('moderate')) {return AlertTriangle}
+    if (riskLevel.toLowerCase().includes('low')) {
+      return CheckCircle
+    }
+    if (riskLevel.toLowerCase().includes('moderate')) {
+      return AlertTriangle
+    }
     return AlertTriangle
   }
 
@@ -82,13 +94,18 @@ export function AIGuideOptimizer({
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
               <div>
-                <CardTitle className="text-white">AI Guide Optimization</CardTitle>
+                <CardTitle className="text-white">
+                  AI Guide Optimization
+                </CardTitle>
                 <CardDescription className="text-slate-400">
                   Enhance guide RNA efficiency and specificity
                 </CardDescription>
               </div>
             </div>
-            <Badge variant="outline" className="border-blue-500/50 text-blue-400">
+            <Badge
+              variant="outline"
+              className="border-blue-500/50 text-blue-400"
+            >
               <Zap className="h-3 w-3 mr-1" />
               Smart Optimization
             </Badge>
@@ -129,7 +146,7 @@ export function AIGuideOptimizer({
 
           {!optimization && !isOptimizing && (
             <div className="text-center">
-              <Button 
+              <Button
                 onClick={performOptimization}
                 className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg transition-all duration-200"
               >
@@ -152,7 +169,9 @@ export function AIGuideOptimizer({
               >
                 <Loader2 className="h-8 w-8 text-blue-400" />
               </motion.div>
-              <p className="text-white mb-2">AI is optimizing your guide RNA...</p>
+              <p className="text-white mb-2">
+                AI is optimizing your guide RNA...
+              </p>
               <p className="text-slate-400 text-sm">
                 Analyzing sequence features and suggesting improvements
               </p>
@@ -180,9 +199,11 @@ export function AIGuideOptimizer({
                 <div className="p-4 bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20 rounded-lg">
                   <div className="flex items-center space-x-2 mb-3">
                     <CheckCircle className="h-5 w-5 text-green-400" />
-                    <h4 className="text-white font-medium">Optimized Sequence</h4>
+                    <h4 className="text-white font-medium">
+                      Optimized Sequence
+                    </h4>
                   </div>
-                  
+
                   <div className="space-y-3">
                     <div className="flex items-center space-x-2">
                       <span className="text-slate-400 text-sm">Original:</span>
@@ -208,11 +229,17 @@ export function AIGuideOptimizer({
                 <div className="flex items-center space-x-2 mb-2">
                   {(() => {
                     const RiskIcon = getRiskIcon(optimization.riskAssessment)
-                    return <RiskIcon className={`h-5 w-5 ${getRiskColor(optimization.riskAssessment)}`} />
+                    return (
+                      <RiskIcon
+                        className={`h-5 w-5 ${getRiskColor(optimization.riskAssessment)}`}
+                      />
+                    )
                   })()}
                   <h4 className="text-white font-medium">Risk Assessment</h4>
                 </div>
-                <p className={`text-sm ${getRiskColor(optimization.riskAssessment)}`}>
+                <p
+                  className={`text-sm ${getRiskColor(optimization.riskAssessment)}`}
+                >
                   {optimization.riskAssessment}
                 </p>
               </div>
@@ -222,7 +249,9 @@ export function AIGuideOptimizer({
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
                     <Lightbulb className="h-4 w-4 text-yellow-400" />
-                    <h4 className="text-white font-medium">AI Recommendations</h4>
+                    <h4 className="text-white font-medium">
+                      AI Recommendations
+                    </h4>
                   </div>
                   <div className="space-y-2">
                     {optimization.improvements.map((improvement, index) => (
@@ -251,7 +280,7 @@ export function AIGuideOptimizer({
                 </div>
                 <div className="flex items-center space-x-2">
                   <div className="w-16 bg-slate-700 rounded-full h-2">
-                    <div 
+                    <div
                       className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-500"
                       style={{ width: `${optimization.confidence * 100}%` }}
                     />
@@ -264,7 +293,7 @@ export function AIGuideOptimizer({
 
               {/* Re-optimize Button */}
               <div className="pt-2">
-                <Button 
+                <Button
                   onClick={performOptimization}
                   variant="outline"
                   size="sm"
@@ -280,4 +309,4 @@ export function AIGuideOptimizer({
       </Card>
     </motion.div>
   )
-} 
+}

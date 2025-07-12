@@ -43,29 +43,28 @@ export function CrisprStudio() {
   const [selectedGuideForOffTarget, setSelectedGuideForOffTarget] = useState<
     GuideRNA | undefined
   >()
-  const [selectedGuideForOptimization, setSelectedGuideForOptimization] = useState<
-    GuideRNA | undefined
-  >()
+  const [selectedGuideForOptimization, setSelectedGuideForOptimization] =
+    useState<GuideRNA | undefined>()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="border-b border-white/10 backdrop-blur-sm bg-black/20"
+        className="border-b border-border bg-white shadow-sm"
       >
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg">
-                <Dna className="h-6 w-6" />
+              <div className="p-2 bg-primary rounded-lg">
+                <Dna className="h-6 w-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                <h1 className="text-2xl font-bold text-foreground">
                   CRISPR Design Studio
                 </h1>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-muted-foreground">
                   AI-Powered Gene Editing Platform
                 </p>
               </div>
@@ -74,7 +73,7 @@ export function CrisprStudio() {
               <Button
                 variant="outline"
                 size="sm"
-                className="border-white/30 bg-white/5 text-white hover:bg-white/20 hover:border-white/40 transition-all duration-200"
+                className="transition-all duration-200"
               >
                 <Settings className="h-4 w-4 mr-2" />
                 Settings
@@ -89,7 +88,7 @@ export function CrisprStudio() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
-        className="border-b border-white/10 bg-black/10 backdrop-blur-sm"
+        className="border-b border-border bg-muted"
       >
         <div className="container mx-auto px-6">
           <div className="flex space-x-1">
@@ -108,8 +107,8 @@ export function CrisprStudio() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`px-4 py-3 text-sm font-medium rounded-t-lg transition-all duration-200 flex items-center space-x-2 ${
                     activeTab === tab.id
-                      ? 'bg-white/15 text-purple-300 border-b-2 border-purple-400 shadow-lg'
-                      : 'text-slate-400 hover:text-white hover:bg-white/10 hover:text-purple-300'
+                      ? 'bg-primary text-primary-foreground border-b-2 border-primary shadow-lg'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background'
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -153,7 +152,7 @@ export function CrisprStudio() {
       </main>
 
       {/* AI Chat Assistant - Always Available */}
-      <AIChatAssistant 
+      <AIChatAssistant
         context={{
           currentTab: activeTab,
           sequence: currentSequence,
@@ -161,8 +160,8 @@ export function CrisprStudio() {
           selectedGuides: {
             for3D: selectedGuideFor3D,
             forOffTarget: selectedGuideForOffTarget,
-            forOptimization: selectedGuideForOptimization
-          }
+            forOptimization: selectedGuideForOptimization,
+          },
         }}
       />
     </div>
@@ -585,7 +584,8 @@ function AIToolsView({
           transition={{ delay: 0.3 }}
           className="text-lg text-slate-300 max-w-2xl mx-auto"
         >
-          Leverage advanced AI to optimize guide RNAs, analyze sequences, and get expert recommendations
+          Leverage advanced AI to optimize guide RNAs, analyze sequences, and
+          get expert recommendations
         </motion.p>
       </div>
 
@@ -673,7 +673,8 @@ function AIToolsView({
               <h3 className="text-white font-semibold">AI Optimization</h3>
             </div>
             <p className="text-slate-300 text-sm">
-              Enhance guide RNA efficiency and specificity using machine learning algorithms
+              Enhance guide RNA efficiency and specificity using machine
+              learning algorithms
             </p>
           </CardContent>
         </Card>
@@ -687,7 +688,8 @@ function AIToolsView({
               <h3 className="text-white font-semibold">Smart Analysis</h3>
             </div>
             <p className="text-slate-300 text-sm">
-              Get intelligent insights about sequence quality and potential challenges
+              Get intelligent insights about sequence quality and potential
+              challenges
             </p>
           </CardContent>
         </Card>
@@ -701,7 +703,8 @@ function AIToolsView({
               <h3 className="text-white font-semibold">Expert Assistant</h3>
             </div>
             <p className="text-slate-300 text-sm">
-              Ask questions and get expert guidance through our AI chat assistant
+              Ask questions and get expert guidance through our AI chat
+              assistant
             </p>
           </CardContent>
         </Card>

@@ -56,21 +56,22 @@ class NanoporeFormExtractionService {
    */
   async extractFormData(file: File): Promise<NanoporeExtractionResult> {
     const startTime = Date.now()
-    
+
     try {
       // Step 1: Check if PDF parsing is available
       const isPdfAvailable = await pdfTextService.isAvailable()
       if (!isPdfAvailable) {
         return {
           success: false,
-          error: 'PDF parsing is not available. Please check that the pdf-parse library is properly installed.',
+          error:
+            'PDF parsing is not available. Please check that the pdf-parse library is properly installed.',
           processingTime: Date.now() - startTime,
         }
       }
 
       // Step 2: Extract text from PDF
       const textResult = await pdfTextService.extractText(file)
-      
+
       if (!textResult.success || !textResult.data) {
         return {
           success: false,
@@ -92,7 +93,10 @@ class NanoporeFormExtractionService {
             extractionMethod = 'llm'
           }
         } catch (error) {
-          console.warn('LLM extraction failed, falling back to pattern matching:', error)
+          console.warn(
+            'LLM extraction failed, falling back to pattern matching:',
+            error,
+          )
         }
       }
 
@@ -111,21 +115,24 @@ class NanoporeFormExtractionService {
       // Step 5: Enhance with RAG system if available
       let ragInsights: RAGResult | undefined
       let ragRecommendations: string[] = []
-      
+
       try {
         const isRagAvailable = await ragService.isAvailable()
         if (isRagAvailable && formData) {
           const ragResult = await ragService.enhanceExtraction(formData)
-          
+
           // Use RAG-enhanced data if it has better confidence
           if (ragResult.ragInsights.overallConfidence > formData.confidence) {
             formData = {
               ...formData,
               ...ragResult.enhancedData,
               extractionMethod: 'rag',
-              confidence: Math.max(formData.confidence, ragResult.ragInsights.overallConfidence),
+              confidence: Math.max(
+                formData.confidence,
+                ragResult.ragInsights.overallConfidence,
+              ),
               ragInsights: ragResult.ragInsights,
-              ragRecommendations: ragResult.recommendations
+              ragRecommendations: ragResult.recommendations,
             }
             extractionMethod = 'rag'
           } else {
@@ -133,7 +140,7 @@ class NanoporeFormExtractionService {
             formData.ragInsights = ragResult.ragInsights
             formData.ragRecommendations = ragResult.recommendations
           }
-          
+
           ragInsights = ragResult.ragInsights
           ragRecommendations = ragResult.recommendations
         }
@@ -145,11 +152,14 @@ class NanoporeFormExtractionService {
       // Step 6: Final validation and confidence calculation
       const processingTime = Date.now() - startTime
       const validationIssues = this.validateExtractedData(formData)
-      
+
       // Adjust confidence based on validation issues
       let finalConfidence = formData.confidence
       if (validationIssues.length > 0) {
-        finalConfidence = Math.max(0.3, finalConfidence - (validationIssues.length * 0.1))
+        finalConfidence = Math.max(
+          0.3,
+          finalConfidence - validationIssues.length * 0.1,
+        )
       }
 
       // Add RAG insights to issues if available
@@ -164,7 +174,7 @@ class NanoporeFormExtractionService {
         issues: validationIssues,
         processingTime,
         ragInsights,
-        ragRecommendations
+        ragRecommendations,
       }
 
       return {
@@ -172,11 +182,11 @@ class NanoporeFormExtractionService {
         data: finalData,
         processingTime,
       }
-
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error:
+          error instanceof Error ? error.message : 'Unknown error occurred',
         processingTime: Date.now() - startTime,
       }
     }
@@ -185,7 +195,9 @@ class NanoporeFormExtractionService {
   /**
    * Extract form data using LLM with specialized prompts
    */
-  private async extractWithLLM(rawText: string): Promise<NanoporeFormData | null> {
+  private async extractWithLLM(
+    rawText: string,
+  ): Promise<NanoporeFormData | null> {
     const prompt = `
 You are an expert at extracting information from Oxford Nanopore sequencing submission forms.
 Analyze the following PDF text and extract the relevant form fields.
@@ -284,7 +296,8 @@ JSON Response:
     return {
       sampleName: basicFields.sampleName || nanoporeFields.sampleName,
       submitterName: basicFields.submitterName || nanoporeFields.submitterName,
-      submitterEmail: basicFields.submitterEmail || nanoporeFields.submitterEmail,
+      submitterEmail:
+        basicFields.submitterEmail || nanoporeFields.submitterEmail,
       labName: basicFields.labName || nanoporeFields.labName,
       projectName: basicFields.projectName || nanoporeFields.projectName,
       sequencingType: nanoporeFields.sequencingType,
@@ -295,7 +308,7 @@ JSON Response:
       volume: nanoporeFields.volume,
       purity: nanoporeFields.purity,
       fragmentSize: nanoporeFields.fragmentSize,
-      priority: basicFields.priority as any || nanoporeFields.priority,
+      priority: (basicFields.priority as any) || nanoporeFields.priority,
       basecalling: nanoporeFields.basecalling,
       demultiplexing: nanoporeFields.demultiplexing,
       referenceGenome: nanoporeFields.referenceGenome,
@@ -310,7 +323,9 @@ JSON Response:
   /**
    * Extract Nanopore-specific fields using targeted patterns
    */
-  private extractNanoporeSpecificFields(rawText: string): Partial<NanoporeFormData> {
+  private extractNanoporeSpecificFields(
+    rawText: string,
+  ): Partial<NanoporeFormData> {
     const fields: Partial<NanoporeFormData> = {}
 
     // Concentration patterns
@@ -405,7 +420,10 @@ JSON Response:
   /**
    * Merge LLM and pattern matching results
    */
-  private mergeExtractionResults(llmData: NanoporeFormData, patternData: NanoporeFormData): NanoporeFormData {
+  private mergeExtractionResults(
+    llmData: NanoporeFormData,
+    patternData: NanoporeFormData,
+  ): NanoporeFormData {
     return {
       // Prefer LLM results, fall back to pattern matching
       sampleName: llmData.sampleName || patternData.sampleName,
@@ -465,7 +483,8 @@ JSON Response:
 
     // Concentration validation
     if (data.concentration) {
-      const concRegex = /^[\d.]+\s*(?:ng\/μl|ng\/ul|ng\/ml|μg\/μl|μg\/ul|μg\/ml|nm|μm)$/i
+      const concRegex =
+        /^[\d.]+\s*(?:ng\/μl|ng\/ul|ng\/ml|μg\/μl|μg\/ul|μg\/ml|nm|μm)$/i
       if (!concRegex.test(data.concentration)) {
         issues.push('Invalid concentration format')
         confidence *= 0.95
@@ -483,7 +502,9 @@ JSON Response:
 
     // Calculate final confidence based on field completeness
     const totalFields = 19 // Total possible fields
-    const filledFields = Object.values(data).filter(v => v !== undefined && v !== null && v !== '').length
+    const filledFields = Object.values(data).filter(
+      (v) => v !== undefined && v !== null && v !== '',
+    ).length
     const completeness = filledFields / totalFields
 
     data.confidence = Math.min(confidence * (0.5 + completeness * 0.5), 1.0)
@@ -493,4 +514,4 @@ JSON Response:
 }
 
 // Export singleton instance
-export const nanoporeFormService = new NanoporeFormExtractionService() 
+export const nanoporeFormService = new NanoporeFormExtractionService()

@@ -325,7 +325,7 @@ export function SequenceInput({
               )}
 
               {/* Statistics */}
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-white/10 border border-white/20 rounded-lg">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-white/10 border border-white/20 rounded-lg">
                 <div className="text-center">
                   <div className="text-lg font-bold text-white">
                     {validation.stats.length}
@@ -376,7 +376,7 @@ export function SequenceInput({
 
       {/* AI Sequence Analysis */}
       {sequence && sequence.length >= 20 && (
-        <AISequenceAnalyzer 
+        <AISequenceAnalyzer
           sequence={sequence}
           context={`Sequence Name: ${sequenceName}, Type: ${sequenceType}`}
         />

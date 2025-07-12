@@ -46,7 +46,8 @@ class PdfTextExtractionService {
     try {
       // Check if we're in browser environment
       if (typeof window !== 'undefined') {
-        this.initializationError = 'PDF parsing is not available in browser environment'
+        this.initializationError =
+          'PDF parsing is not available in browser environment'
         this.isInitialized = true
         return false
       }
@@ -57,7 +58,8 @@ class PdfTextExtractionService {
       this.isInitialized = true
       return true
     } catch (error) {
-      this.initializationError = error instanceof Error ? error.message : 'Failed to load PDF parser'
+      this.initializationError =
+        error instanceof Error ? error.message : 'Failed to load PDF parser'
       this.isInitialized = true
       console.error('Failed to initialize PDF parser:', error)
       return false
@@ -94,8 +96,12 @@ class PdfTextExtractionService {
           subject: pdfData.info?.Subject,
           creator: pdfData.info?.Creator,
           producer: pdfData.info?.Producer,
-          creationDate: pdfData.info?.CreationDate ? new Date(pdfData.info.CreationDate) : undefined,
-          modificationDate: pdfData.info?.ModDate ? new Date(pdfData.info.ModDate) : undefined,
+          creationDate: pdfData.info?.CreationDate
+            ? new Date(pdfData.info.CreationDate)
+            : undefined,
+          modificationDate: pdfData.info?.ModDate
+            ? new Date(pdfData.info.ModDate)
+            : undefined,
         },
       }
 
@@ -107,7 +113,10 @@ class PdfTextExtractionService {
       console.error('PDF text extraction failed:', error)
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to extract text from PDF',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to extract text from PDF',
       }
     }
   }
@@ -116,7 +125,9 @@ class PdfTextExtractionService {
    * Extract structured data from PDF text using pattern matching
    * This provides a fallback when LLM is not available
    */
-  extractStructuredData(rawText: string): Partial<ExtractedPdfData['extractedFields']> {
+  extractStructuredData(
+    rawText: string,
+  ): Partial<ExtractedPdfData['extractedFields']> {
     const fields: Partial<ExtractedPdfData['extractedFields']> = {}
 
     try {
@@ -281,7 +292,9 @@ class PdfTextExtractionService {
   /**
    * Validate extracted data quality
    */
-  validateExtractedData(fields: Partial<ExtractedPdfData['extractedFields']> | undefined): {
+  validateExtractedData(
+    fields: Partial<ExtractedPdfData['extractedFields']> | undefined,
+  ): {
     isValid: boolean
     issues: string[]
     confidence: number
@@ -330,4 +343,4 @@ class PdfTextExtractionService {
 }
 
 // Export singleton instance
-export const pdfTextService = new PdfTextExtractionService() 
+export const pdfTextService = new PdfTextExtractionService()

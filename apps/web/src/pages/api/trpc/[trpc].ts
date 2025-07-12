@@ -16,7 +16,7 @@ interface CreateContextOptions {
 async function createContext({ req }: CreateContextOptions): Promise<Context> {
   // Initialize database connection with explicit DATABASE_URL
   const db = setupDb(DATABASE_URL)
-  
+
   const session = await auth.api.getSession({ headers: req.headers })
 
   const user = session?.user.id

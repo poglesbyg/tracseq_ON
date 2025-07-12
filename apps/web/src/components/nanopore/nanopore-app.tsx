@@ -1,5 +1,4 @@
-import { ThemeProvider } from 'next-themes'
-
+import { UNCLayout } from '../layout/unc-layout'
 import { TrpcProvider } from '../providers/trpc-provider'
 import { Toaster } from '../ui/sonner'
 
@@ -7,11 +6,13 @@ import NanoporeDashboard from './nanopore-dashboard'
 
 export function NanoporeApp() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <TrpcProvider>
-        <NanoporeDashboard />
+    <TrpcProvider>
+      <UNCLayout>
+        <div className="container mx-auto px-4 py-8">
+          <NanoporeDashboard />
+        </div>
         <Toaster />
-      </TrpcProvider>
-    </ThemeProvider>
+      </UNCLayout>
+    </TrpcProvider>
   )
-} 
+}

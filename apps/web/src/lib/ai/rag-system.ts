@@ -62,15 +62,20 @@ class RAGSystem {
 
     try {
       // Use a lightweight sentence transformer model
-      this.embedder = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2')
-      
+      this.embedder = await pipeline(
+        'feature-extraction',
+        'Xenova/all-MiniLM-L6-v2',
+      )
+
       // Generate embeddings for all field mappings
       await this.generateFieldEmbeddings()
-      
+
       this.isInitialized = true
     } catch (error) {
       console.error('Failed to initialize RAG system:', error)
-      throw new Error(`RAG initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      throw new Error(
+        `RAG initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
     }
   }
 
@@ -95,86 +100,166 @@ class RAGSystem {
     this.fieldMappings = [
       {
         fieldName: 'sampleName',
-        aliases: ['sample name', 'sample id', 'specimen name', 'sample identifier', 'sample code'],
+        aliases: [
+          'sample name',
+          'sample id',
+          'specimen name',
+          'sample identifier',
+          'sample code',
+        ],
         description: 'Unique identifier for the biological sample',
         dataType: 'string',
         required: true,
         validation: /^[\w.\-]+$/,
-        examples: ['Human_DNA_Sample_001', 'Plant_Genome_002', 'Bacterial_Culture_003']
+        examples: [
+          'Human_DNA_Sample_001',
+          'Plant_Genome_002',
+          'Bacterial_Culture_003',
+        ],
       },
       {
         fieldName: 'submitterName',
-        aliases: ['submitter', 'researcher name', 'principal investigator', 'contact person', 'scientist name'],
+        aliases: [
+          'submitter',
+          'researcher name',
+          'principal investigator',
+          'contact person',
+          'scientist name',
+        ],
         description: 'Name of the person submitting the sample',
         dataType: 'string',
         required: true,
-        examples: ['Dr. Sarah Johnson', 'Michael Chen', 'Prof. Lisa Rodriguez']
+        examples: ['Dr. Sarah Johnson', 'Michael Chen', 'Prof. Lisa Rodriguez'],
       },
       {
         fieldName: 'submitterEmail',
-        aliases: ['email', 'contact email', 'researcher email', 'submitter email address'],
+        aliases: [
+          'email',
+          'contact email',
+          'researcher email',
+          'submitter email address',
+        ],
         description: 'Email address of the submitter',
         dataType: 'email',
         required: true,
         validation: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-        examples: ['sarah.johnson@unc.edu', 'michael.chen@university.edu']
+        examples: ['sarah.johnson@unc.edu', 'michael.chen@university.edu'],
       },
       {
         fieldName: 'labName',
-        aliases: ['lab', 'laboratory', 'research group', 'lab name', 'department'],
+        aliases: [
+          'lab',
+          'laboratory',
+          'research group',
+          'lab name',
+          'department',
+        ],
         description: 'Name of the laboratory or research group',
         dataType: 'string',
         required: false,
-        examples: ['Johnson Lab', 'Chen Laboratory', 'Molecular Biology Department']
+        examples: [
+          'Johnson Lab',
+          'Chen Laboratory',
+          'Molecular Biology Department',
+        ],
       },
       {
         fieldName: 'projectName',
-        aliases: ['project', 'project name', 'study name', 'research project', 'grant number'],
+        aliases: [
+          'project',
+          'project name',
+          'study name',
+          'research project',
+          'grant number',
+        ],
         description: 'Name or identifier of the research project',
         dataType: 'string',
         required: false,
-        examples: ['HTSF-CJ-001', 'Cancer Genomics Study', 'Plant Diversity Project']
+        examples: [
+          'HTSF-CJ-001',
+          'Cancer Genomics Study',
+          'Plant Diversity Project',
+        ],
       },
       {
         fieldName: 'sequencingType',
-        aliases: ['sequencing type', 'nucleic acid type', 'sample type', 'material type'],
+        aliases: [
+          'sequencing type',
+          'nucleic acid type',
+          'sample type',
+          'material type',
+        ],
         description: 'Type of nucleic acid to be sequenced',
         dataType: 'select',
         required: true,
-        examples: ['DNA', 'RNA', 'cDNA', 'Genomic DNA', 'Total RNA']
+        examples: ['DNA', 'RNA', 'cDNA', 'Genomic DNA', 'Total RNA'],
       },
       {
         fieldName: 'sampleType',
-        aliases: ['sample type', 'specimen type', 'biological material', 'source material'],
+        aliases: [
+          'sample type',
+          'specimen type',
+          'biological material',
+          'source material',
+        ],
         description: 'Type of biological sample',
         dataType: 'select',
         required: true,
-        examples: ['Genomic DNA', 'Total RNA', 'Plasmid DNA', 'PCR Product', 'cDNA']
+        examples: [
+          'Genomic DNA',
+          'Total RNA',
+          'Plasmid DNA',
+          'PCR Product',
+          'cDNA',
+        ],
       },
       {
         fieldName: 'libraryType',
-        aliases: ['library type', 'library prep', 'library preparation', 'sequencing library'],
+        aliases: [
+          'library type',
+          'library prep',
+          'library preparation',
+          'sequencing library',
+        ],
         description: 'Type of sequencing library preparation',
         dataType: 'select',
         required: true,
-        examples: ['Ligation', 'Rapid', 'PCR-free', 'Amplicon', 'Direct RNA']
+        examples: ['Ligation', 'Rapid', 'PCR-free', 'Amplicon', 'Direct RNA'],
       },
       {
         fieldName: 'flowCellType',
-        aliases: ['flow cell', 'flowcell type', 'sequencing platform', 'nanopore device'],
+        aliases: [
+          'flow cell',
+          'flowcell type',
+          'sequencing platform',
+          'nanopore device',
+        ],
         description: 'Type of nanopore flow cell to use',
         dataType: 'select',
         required: true,
-        examples: ['MinION', 'GridION', 'PromethION', 'Flongle', 'R9.4.1', 'R10.4.1']
+        examples: [
+          'MinION',
+          'GridION',
+          'PromethION',
+          'Flongle',
+          'R9.4.1',
+          'R10.4.1',
+        ],
       },
       {
         fieldName: 'concentration',
-        aliases: ['concentration', 'dna concentration', 'rna concentration', 'conc', 'ng/ul'],
+        aliases: [
+          'concentration',
+          'dna concentration',
+          'rna concentration',
+          'conc',
+          'ng/ul',
+        ],
         description: 'Concentration of the sample in ng/μL',
         dataType: 'string',
         required: false,
         validation: /^\d+(\.\d+)?\s*(ng\/μl|ng\/ul|ng\/µl|μg\/μl|ug\/ul)$/i,
-        examples: ['50 ng/μL', '100.5 ng/ul', '25.3 ng/μL']
+        examples: ['50 ng/μL', '100.5 ng/ul', '25.3 ng/μL'],
       },
       {
         fieldName: 'volume',
@@ -183,74 +268,129 @@ class RAGSystem {
         dataType: 'string',
         required: false,
         validation: /^\d+(\.\d+)?\s*(μl|ul|µl|ml)$/i,
-        examples: ['50 μL', '100 ul', '25.5 μL']
+        examples: ['50 μL', '100 ul', '25.5 μL'],
       },
       {
         fieldName: 'purity',
-        aliases: ['purity', '260/280', '260/230', 'a260/a280', 'ratio', 'quality'],
+        aliases: [
+          'purity',
+          '260/280',
+          '260/230',
+          'a260/a280',
+          'ratio',
+          'quality',
+        ],
         description: 'Sample purity ratios (260/280, 260/230)',
         dataType: 'string',
         required: false,
         validation: /^\d+(\.\d+)?(\/\d+(\.\d+)?)?$/,
-        examples: ['1.8', '1.9/2.1', '260/280: 1.8']
+        examples: ['1.8', '1.9/2.1', '260/280: 1.8'],
       },
       {
         fieldName: 'fragmentSize',
-        aliases: ['fragment size', 'size', 'length', 'bp', 'base pairs', 'molecular weight'],
+        aliases: [
+          'fragment size',
+          'size',
+          'length',
+          'bp',
+          'base pairs',
+          'molecular weight',
+        ],
         description: 'Expected fragment size in base pairs',
         dataType: 'string',
         required: false,
         validation: /^\d+(\.\d+)?\s*(bp|kb|mb|kbp|mbp)?$/i,
-        examples: ['10 kb', '5000 bp', '15-20 kb']
+        examples: ['10 kb', '5000 bp', '15-20 kb'],
       },
       {
         fieldName: 'priority',
-        aliases: ['priority', 'urgency', 'turnaround time', 'rush', 'standard', 'urgent'],
+        aliases: [
+          'priority',
+          'urgency',
+          'turnaround time',
+          'rush',
+          'standard',
+          'urgent',
+        ],
         description: 'Processing priority level',
         dataType: 'select',
         required: false,
-        examples: ['Standard', 'High', 'Rush', 'Urgent', 'Low']
+        examples: ['Standard', 'High', 'Rush', 'Urgent', 'Low'],
       },
       {
         fieldName: 'basecalling',
-        aliases: ['basecalling', 'base calling', 'basecaller', 'guppy', 'dorado'],
+        aliases: [
+          'basecalling',
+          'base calling',
+          'basecaller',
+          'guppy',
+          'dorado',
+        ],
         description: 'Basecalling method or software',
         dataType: 'select',
         required: false,
-        examples: ['Standard', 'High Accuracy', 'Fast', 'Guppy', 'Dorado']
+        examples: ['Standard', 'High Accuracy', 'Fast', 'Guppy', 'Dorado'],
       },
       {
         fieldName: 'demultiplexing',
-        aliases: ['demultiplexing', 'demux', 'barcoding', 'barcode', 'multiplexing'],
+        aliases: [
+          'demultiplexing',
+          'demux',
+          'barcoding',
+          'barcode',
+          'multiplexing',
+        ],
         description: 'Whether demultiplexing is required',
         dataType: 'boolean',
         required: false,
-        examples: ['Yes', 'No', 'True', 'False', 'Required']
+        examples: ['Yes', 'No', 'True', 'False', 'Required'],
       },
       {
         fieldName: 'referenceGenome',
-        aliases: ['reference genome', 'reference', 'genome', 'organism', 'species'],
+        aliases: [
+          'reference genome',
+          'reference',
+          'genome',
+          'organism',
+          'species',
+        ],
         description: 'Reference genome for analysis',
         dataType: 'string',
         required: false,
-        examples: ['Human (hg38)', 'Mouse (mm10)', 'E. coli', 'Arabidopsis']
+        examples: ['Human (hg38)', 'Mouse (mm10)', 'E. coli', 'Arabidopsis'],
       },
       {
         fieldName: 'analysisType',
-        aliases: ['analysis type', 'analysis', 'bioinformatics', 'pipeline', 'workflow'],
+        aliases: [
+          'analysis type',
+          'analysis',
+          'bioinformatics',
+          'pipeline',
+          'workflow',
+        ],
         description: 'Type of bioinformatics analysis required',
         dataType: 'string',
         required: false,
-        examples: ['Genome Assembly', 'Variant Calling', 'RNA-seq', 'Metagenomics']
+        examples: [
+          'Genome Assembly',
+          'Variant Calling',
+          'RNA-seq',
+          'Metagenomics',
+        ],
       },
       {
         fieldName: 'dataDelivery',
-        aliases: ['data delivery', 'delivery method', 'output format', 'results format'],
+        aliases: [
+          'data delivery',
+          'delivery method',
+          'output format',
+          'results format',
+        ],
         description: 'How results should be delivered',
         dataType: 'select',
         required: false,
-        examples: ['Raw Data', 'Processed', 'FASTQ', 'BAM', 'VCF']
-      }
+        examples: ['Raw Data', 'Processed', 'FASTQ', 'BAM', 'VCF'],
+      },
     ]
   }
 
@@ -270,7 +410,7 @@ class RAGSystem {
         field.fieldName,
         ...field.aliases,
         field.description,
-        ...field.examples
+        ...field.examples,
       ]
 
       for (const text of textVariations) {
@@ -282,8 +422,8 @@ class RAGSystem {
             metadata: {
               fieldName: field.fieldName,
               context: 'field_mapping',
-              confidence: 1.0
-            }
+              confidence: 1.0,
+            },
           })
         } catch (error) {
           console.warn(`Failed to generate embedding for "${text}":`, error)
@@ -301,10 +441,15 @@ class RAGSystem {
     }
 
     try {
-      const output = await this.embedder(text, { pooling: 'mean', normalize: true })
+      const output = await this.embedder(text, {
+        pooling: 'mean',
+        normalize: true,
+      })
       return Array.from(output.data)
     } catch (error) {
-      throw new Error(`Failed to generate embedding: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      throw new Error(
+        `Failed to generate embedding: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
     }
   }
 
@@ -332,7 +477,10 @@ class RAGSystem {
   /**
    * Find the best field mapping for a given text using semantic similarity
    */
-  private async findBestFieldMapping(text: string, threshold = 0.6): Promise<{
+  private async findBestFieldMapping(
+    text: string,
+    threshold = 0.6,
+  ): Promise<{
     fieldName: string
     confidence: number
     reasoning: string
@@ -342,13 +490,16 @@ class RAGSystem {
       let bestMatch = { fieldName: '', confidence: 0, reasoning: '' }
 
       for (const fieldEmbedding of this.fieldEmbeddings) {
-        const similarity = this.cosineSimilarity(queryEmbedding, fieldEmbedding.embedding)
-        
+        const similarity = this.cosineSimilarity(
+          queryEmbedding,
+          fieldEmbedding.embedding,
+        )
+
         if (similarity > bestMatch.confidence) {
           bestMatch = {
             fieldName: fieldEmbedding.metadata.fieldName,
             confidence: similarity,
-            reasoning: `Matched with "${fieldEmbedding.text}" (similarity: ${similarity.toFixed(3)})`
+            reasoning: `Matched with "${fieldEmbedding.text}" (similarity: ${similarity.toFixed(3)})`,
           }
         }
       }
@@ -363,11 +514,14 @@ class RAGSystem {
   /**
    * Validate extracted value against field requirements
    */
-  private validateFieldValue(fieldName: string, value: string): {
+  private validateFieldValue(
+    fieldName: string,
+    value: string,
+  ): {
     isValid: boolean
     issues: string[]
   } {
-    const field = this.fieldMappings.find(f => f.fieldName === fieldName)
+    const field = this.fieldMappings.find((f) => f.fieldName === fieldName)
     if (!field) {
       return { isValid: false, issues: ['Unknown field'] }
     }
@@ -397,7 +551,12 @@ class RAGSystem {
         }
         break
       case 'boolean':
-        if (value && !['true', 'false', 'yes', 'no', '1', '0'].includes(value.toLowerCase())) {
+        if (
+          value &&
+          !['true', 'false', 'yes', 'no', '1', '0'].includes(
+            value.toLowerCase(),
+          )
+        ) {
           issues.push('Value is not a valid boolean')
         }
         break
@@ -409,7 +568,9 @@ class RAGSystem {
   /**
    * Process extracted text using RAG for intelligent field mapping
    */
-  async processExtractedText(extractedPairs: { key: string; value: string }[]): Promise<RAGResult> {
+  async processExtractedText(
+    extractedPairs: { key: string; value: string }[],
+  ): Promise<RAGResult> {
     const startTime = Date.now()
 
     if (!this.isInitialized) {
@@ -423,43 +584,56 @@ class RAGSystem {
       try {
         // Find the best field mapping using semantic similarity
         const mapping = await this.findBestFieldMapping(pair.key)
-        
+
         if (mapping) {
           // Validate the extracted value
-          const validation = this.validateFieldValue(mapping.fieldName, pair.value)
-          
+          const validation = this.validateFieldValue(
+            mapping.fieldName,
+            pair.value,
+          )
+
           matches.push({
             fieldName: mapping.fieldName,
             extractedValue: pair.value,
             confidence: mapping.confidence,
             reasoning: mapping.reasoning,
             validationPassed: validation.isValid,
-            issues: validation.issues
+            issues: validation.issues,
           })
 
           if (!validation.isValid) {
-            validationIssues.push(`${mapping.fieldName}: ${validation.issues.join(', ')}`)
+            validationIssues.push(
+              `${mapping.fieldName}: ${validation.issues.join(', ')}`,
+            )
           }
         } else {
           // No good mapping found
-          validationIssues.push(`Could not map field "${pair.key}" to any known field`)
+          validationIssues.push(
+            `Could not map field "${pair.key}" to any known field`,
+          )
         }
       } catch (error) {
-        validationIssues.push(`Error processing "${pair.key}": ${error instanceof Error ? error.message : 'Unknown error'}`)
+        validationIssues.push(
+          `Error processing "${pair.key}": ${error instanceof Error ? error.message : 'Unknown error'}`,
+        )
       }
     }
 
     // Calculate overall confidence
-    const totalConfidence = matches.reduce((sum, match) => sum + match.confidence, 0)
-    const overallConfidence = matches.length > 0 ? totalConfidence / matches.length : 0
+    const totalConfidence = matches.reduce(
+      (sum, match) => sum + match.confidence,
+      0,
+    )
+    const overallConfidence =
+      matches.length > 0 ? totalConfidence / matches.length : 0
 
     return {
       matches,
       overallConfidence,
-      totalFields: this.fieldMappings.filter(f => f.required).length,
-      extractedFields: matches.filter(m => m.validationPassed).length,
+      totalFields: this.fieldMappings.filter((f) => f.required).length,
+      extractedFields: matches.filter((m) => m.validationPassed).length,
       validationIssues,
-      processingTime: Date.now() - startTime
+      processingTime: Date.now() - startTime,
     }
   }
 
@@ -473,7 +647,9 @@ class RAGSystem {
   }> {
     // Convert extracted data to key-value pairs
     const pairs = Object.entries(extractedData)
-      .filter(([_, value]) => value !== null && value !== undefined && value !== '')
+      .filter(
+        ([_, value]) => value !== null && value !== undefined && value !== '',
+      )
       .map(([key, value]) => ({ key, value: String(value) }))
 
     // Process with RAG
@@ -481,27 +657,37 @@ class RAGSystem {
 
     // Generate recommendations
     const recommendations: string[] = []
-    
+
     // Check for missing required fields
-    const extractedFieldNames = ragResult.matches.map(m => m.fieldName)
+    const extractedFieldNames = ragResult.matches.map((m) => m.fieldName)
     const missingRequired = this.fieldMappings
-      .filter(f => f.required && !extractedFieldNames.includes(f.fieldName))
-      .map(f => f.fieldName)
+      .filter((f) => f.required && !extractedFieldNames.includes(f.fieldName))
+      .map((f) => f.fieldName)
 
     if (missingRequired.length > 0) {
-      recommendations.push(`Missing required fields: ${missingRequired.join(', ')}`)
+      recommendations.push(
+        `Missing required fields: ${missingRequired.join(', ')}`,
+      )
     }
 
     // Check for low confidence matches
-    const lowConfidenceMatches = ragResult.matches.filter(m => m.confidence < 0.7)
+    const lowConfidenceMatches = ragResult.matches.filter(
+      (m) => m.confidence < 0.7,
+    )
     if (lowConfidenceMatches.length > 0) {
-      recommendations.push(`Low confidence matches found for: ${lowConfidenceMatches.map(m => m.fieldName).join(', ')}`)
+      recommendations.push(
+        `Low confidence matches found for: ${lowConfidenceMatches.map((m) => m.fieldName).join(', ')}`,
+      )
     }
 
     // Check for validation failures
-    const failedValidation = ragResult.matches.filter(m => !m.validationPassed)
+    const failedValidation = ragResult.matches.filter(
+      (m) => !m.validationPassed,
+    )
     if (failedValidation.length > 0) {
-      recommendations.push(`Validation failed for: ${failedValidation.map(m => m.fieldName).join(', ')}`)
+      recommendations.push(
+        `Validation failed for: ${failedValidation.map((m) => m.fieldName).join(', ')}`,
+      )
     }
 
     // Create enhanced data with RAG mappings
@@ -515,7 +701,7 @@ class RAGSystem {
     return {
       enhancedData,
       ragInsights: ragResult,
-      recommendations
+      recommendations,
     }
   }
 }
@@ -533,7 +719,9 @@ export const ragService = {
     return await ragSystem.enhanceExtractionResults(extractedData)
   },
 
-  async processKeyValuePairs(pairs: { key: string; value: string }[]): Promise<RAGResult> {
+  async processKeyValuePairs(
+    pairs: { key: string; value: string }[],
+  ): Promise<RAGResult> {
     return await ragSystem.processExtractedText(pairs)
-  }
-} 
+  },
+}

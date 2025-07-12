@@ -168,12 +168,12 @@ interface NanoporeSampleCardProps {
   onAssign: (id: string) => void
 }
 
-function NanoporeSampleCard({ 
-  sample, 
-  onEdit, 
-  onDelete, 
-  onView, 
-  onAssign 
+function NanoporeSampleCard({
+  sample,
+  onEdit,
+  onDelete,
+  onView,
+  onAssign,
 }: NanoporeSampleCardProps) {
   return (
     <Card className="bg-white/5 border-white/20 backdrop-blur-sm hover:bg-white/10 transition-all duration-200">
@@ -212,7 +212,9 @@ function NanoporeSampleCard({
           </div>
           <div className="flex justify-between">
             <span>Lab:</span>
-            <span className="text-white">{sample.labName || 'Not specified'}</span>
+            <span className="text-white">
+              {sample.labName || 'Not specified'}
+            </span>
           </div>
           <div className="flex justify-between">
             <span>Sample Type:</span>
@@ -237,7 +239,7 @@ function NanoporeSampleCard({
             </span>
           </div>
         </div>
-        
+
         <div className="flex gap-2 mt-4">
           <Button
             size="sm"
@@ -294,7 +296,11 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.sampleName.trim() || !formData.submitterName.trim() || !formData.submitterEmail.trim()) {
+    if (
+      !formData.sampleName.trim() ||
+      !formData.submitterName.trim() ||
+      !formData.submitterEmail.trim()
+    ) {
       return
     }
 
@@ -324,7 +330,7 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
       labName: data.labName || prev.labName,
       projectId: data.projectName || prev.projectId,
       sampleType: data.sequencingType || prev.sampleType,
-      priority: (data.priority?.toLowerCase()) || prev.priority,
+      priority: data.priority?.toLowerCase() || prev.priority,
     }))
 
     // Show success message with extraction info
@@ -368,7 +374,7 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
         <CardDescription className="text-slate-400">
           Add a new sample for Nanopore sequencing (Development Mode)
         </CardDescription>
-        
+
         {/* Tab Navigation */}
         <div className="flex gap-1 mt-4 p-1 bg-white/10 rounded-lg">
           <button
@@ -408,11 +414,14 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
               <div className="bg-blue-50/10 border border-blue-200/30 rounded-lg p-4 mb-4">
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <Brain className="h-5 w-5 text-blue-400" />
-                  <p className="text-sm font-medium text-blue-300">AI-Powered Data Extraction</p>
+                  <p className="text-sm font-medium text-blue-300">
+                    AI-Powered Data Extraction
+                  </p>
                 </div>
                 <p className="text-xs text-slate-400 mb-2">
-                  Our AI system can extract form data from Nanopore submission PDFs with high accuracy.
-                  It uses both LLM analysis and pattern matching for reliable results.
+                  Our AI system can extract form data from Nanopore submission
+                  PDFs with high accuracy. It uses both LLM analysis and pattern
+                  matching for reliable results.
                 </p>
                 <div className="flex items-center justify-center gap-4 text-xs text-slate-500">
                   <span>• Sample information</span>
@@ -432,138 +441,154 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1 text-white">
-              Sample Name *
-            </label>
-            <Input
-              value={formData.sampleName}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, sampleName: e.target.value }))
-              }
-              placeholder="e.g., Human_DNA_Sample_001"
-              required
-              className="bg-slate-800/90 border-slate-600 text-white placeholder:text-slate-400 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
-            />
-          </div>
+            <div>
+              <label className="block text-sm font-medium mb-1 text-white">
+                Sample Name *
+              </label>
+              <Input
+                value={formData.sampleName}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    sampleName: e.target.value,
+                  }))
+                }
+                placeholder="e.g., Human_DNA_Sample_001"
+                required
+                className="bg-slate-800/90 border-slate-600 text-white placeholder:text-slate-400 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1 text-white">
-              Project ID
-            </label>
-            <Input
-              value={formData.projectId}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, projectId: e.target.value }))
-              }
-              placeholder="e.g., HTSF-CJ-001"
-              className="bg-slate-800/90 border-slate-600 text-white placeholder:text-slate-400 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
-            />
-          </div>
+            <div>
+              <label className="block text-sm font-medium mb-1 text-white">
+                Project ID
+              </label>
+              <Input
+                value={formData.projectId}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    projectId: e.target.value,
+                  }))
+                }
+                placeholder="e.g., HTSF-CJ-001"
+                className="bg-slate-800/90 border-slate-600 text-white placeholder:text-slate-400 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1 text-white">
-              Submitter Name *
-            </label>
-            <Input
-              value={formData.submitterName}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, submitterName: e.target.value }))
-              }
-              placeholder="e.g., Dr. Sarah Johnson"
-              required
-              className="bg-slate-800/90 border-slate-600 text-white placeholder:text-slate-400 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
-            />
-          </div>
+            <div>
+              <label className="block text-sm font-medium mb-1 text-white">
+                Submitter Name *
+              </label>
+              <Input
+                value={formData.submitterName}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    submitterName: e.target.value,
+                  }))
+                }
+                placeholder="e.g., Dr. Sarah Johnson"
+                required
+                className="bg-slate-800/90 border-slate-600 text-white placeholder:text-slate-400 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1 text-white">
-              Submitter Email *
-            </label>
-            <Input
-              type="email"
-              value={formData.submitterEmail}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, submitterEmail: e.target.value }))
-              }
-              placeholder="e.g., sarah.johnson@unc.edu"
-              required
-              className="bg-slate-800/90 border-slate-600 text-white placeholder:text-slate-400 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
-            />
-          </div>
+            <div>
+              <label className="block text-sm font-medium mb-1 text-white">
+                Submitter Email *
+              </label>
+              <Input
+                type="email"
+                value={formData.submitterEmail}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    submitterEmail: e.target.value,
+                  }))
+                }
+                placeholder="e.g., sarah.johnson@unc.edu"
+                required
+                className="bg-slate-800/90 border-slate-600 text-white placeholder:text-slate-400 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1 text-white">
-              Lab Name
-            </label>
-            <Input
-              value={formData.labName}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, labName: e.target.value }))
-              }
-              placeholder="e.g., Johnson Lab"
-              className="bg-slate-800/90 border-slate-600 text-white placeholder:text-slate-400 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
-            />
-          </div>
+            <div>
+              <label className="block text-sm font-medium mb-1 text-white">
+                Lab Name
+              </label>
+              <Input
+                value={formData.labName}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, labName: e.target.value }))
+                }
+                placeholder="e.g., Johnson Lab"
+                className="bg-slate-800/90 border-slate-600 text-white placeholder:text-slate-400 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1 text-white">
-              Sample Type
-            </label>
-            <select
-              value={formData.sampleType}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  sampleType: e.target.value,
-                }))
-              }
-              className="w-full px-3 py-2 bg-slate-800/90 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
-            >
-              <option value="DNA">DNA</option>
-              <option value="RNA">RNA</option>
-              <option value="cDNA">cDNA</option>
-            </select>
-          </div>
+            <div>
+              <label className="block text-sm font-medium mb-1 text-white">
+                Sample Type
+              </label>
+              <select
+                value={formData.sampleType}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    sampleType: e.target.value,
+                  }))
+                }
+                className="w-full px-3 py-2 bg-slate-800/90 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
+              >
+                <option value="DNA">DNA</option>
+                <option value="RNA">RNA</option>
+                <option value="cDNA">cDNA</option>
+              </select>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1 text-white">
-              Priority
-            </label>
-            <select
-              value={formData.priority}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  priority: e.target.value as 'low' | 'normal' | 'high' | 'urgent',
-                }))
-              }
-              className="w-full px-3 py-2 bg-slate-800/90 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
-            >
-              <option value="low">Low</option>
-              <option value="normal">Normal</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-            </select>
-          </div>
+            <div>
+              <label className="block text-sm font-medium mb-1 text-white">
+                Priority
+              </label>
+              <select
+                value={formData.priority}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    priority: e.target.value as
+                      | 'low'
+                      | 'normal'
+                      | 'high'
+                      | 'urgent',
+                  }))
+                }
+                className="w-full px-3 py-2 bg-slate-800/90 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
+              >
+                <option value="low">Low</option>
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
 
-          <div className="flex gap-2">
-            <Button
-              type="submit"
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              Submit Sample
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsOpen(false)}
-              className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-            >
-              Cancel
-            </Button>
-          </div>
-        </form>
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Submit Sample
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsOpen(false)}
+                className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
         )}
       </CardContent>
     </Card>
@@ -582,7 +607,8 @@ export default function NanoporeDashboard() {
   })
 
   // Use mock data if there's an authentication error
-  const samples = error?.data?.code === 'UNAUTHORIZED' ? mockNanoporeSamples : realSamples
+  const samples =
+    error?.data?.code === 'UNAUTHORIZED' ? mockNanoporeSamples : realSamples
   const isUsingMockData = error?.data?.code === 'UNAUTHORIZED'
 
   const handleDelete = (id: string) => {
@@ -592,7 +618,9 @@ export default function NanoporeDashboard() {
       )
     ) {
       if (isUsingMockData) {
-        alert('Development Mode: Delete functionality not available with mock data')
+        alert(
+          'Development Mode: Delete functionality not available with mock data',
+        )
       } else {
         console.log('Delete sample:', id)
         alert('Delete functionality would be implemented here')
@@ -653,20 +681,16 @@ export default function NanoporeDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-white">Nanopore Queue</h2>
-          <p className="text-slate-400">
+          <h2 className="text-3xl font-bold text-foreground">Nanopore Queue</h2>
+          <p className="text-muted-foreground">
             Oxford Nanopore sequencing sample tracking
             {isUsingMockData && (
-              <span className="ml-2 text-yellow-400">(Development Mode)</span>
+              <span className="ml-2 text-orange-600">(Development Mode)</span>
             )}
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-            onClick={() => window.location.reload()}
-          >
+          <Button variant="outline" onClick={() => window.location.reload()}>
             Refresh
           </Button>
         </div>
@@ -688,13 +712,15 @@ export default function NanoporeDashboard() {
 
       {samples?.length === 0 && !isLoading && (
         <div className="text-center py-12">
-          <TestTube className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-white mb-2">No samples yet</h3>
-          <p className="text-slate-400">
+          <TestTube className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-foreground mb-2">
+            No samples yet
+          </h3>
+          <p className="text-muted-foreground">
             Submit your first Nanopore sequencing sample to get started.
           </p>
         </div>
       )}
     </div>
   )
-} 
+}

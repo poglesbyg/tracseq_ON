@@ -6,17 +6,25 @@ interface Props {
   title?: string
 }
 
-const { title = 'Monorepo Scaffold' } = Astro.props
+const { title = 'TracSeq ON - Laboratory Management System' } = Astro.props
 ---
 
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
-    <title>{title}</title>
+    <meta
+      name="description"
+      content="TracSeq ON - AI-Driven Laboratory Management Platform for CRISPR gene editing and Oxford Nanopore sequencing workflows at UNC-Chapel Hill"
+    />
+    <meta
+      name="keywords"
+      content="CRISPR, Nanopore, Laboratory Management, UNC-Chapel Hill, Gene Editing, Sequencing"
+    />
+    <title>{title} | The University of North Carolina at Chapel Hill</title>
     <ClientRouter />
   </head>
   <body class="bg-background text-foreground">
@@ -31,12 +39,12 @@ const { title = 'Monorepo Scaffold' } = Astro.props
     width: 100%;
     height: 100%;
   }
-  
+
   /* Ensure dark theme is applied immediately */
   html.dark {
     color-scheme: dark;
   }
-  
+
   /* Prevent white flash during loading */
   body {
     background-color: hsl(var(--background));

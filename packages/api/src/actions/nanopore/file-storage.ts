@@ -36,12 +36,16 @@ export async function uploadFileAttachment(
 ): Promise<FileUploadResult> {
   // Validate file type
   if (!ALLOWED_TYPES.includes(input.file.type)) {
-    throw new Error(`File type ${input.file.type} is not allowed. Only PDF files are supported.`)
+    throw new Error(
+      `File type ${input.file.type} is not allowed. Only PDF files are supported.`,
+    )
   }
 
   // Validate file size
   if (input.file.size > MAX_FILE_SIZE) {
-    throw new Error(`File size ${input.file.size} exceeds maximum allowed size of ${MAX_FILE_SIZE} bytes`)
+    throw new Error(
+      `File size ${input.file.size} exceeds maximum allowed size of ${MAX_FILE_SIZE} bytes`,
+    )
   }
 
   // Ensure upload directory exists
@@ -191,4 +195,4 @@ function sanitizeFileName(fileName: string): string {
  */
 function getFileExtension(fileName: string): string {
   return path.extname(fileName).toLowerCase().substring(1)
-} 
+}

@@ -8,16 +8,16 @@ export type { Context, Env, Session, SessionUser } from './context'
 export { getUser } from './actions/users/getters'
 
 // Export file storage functions and types
-export { 
-  uploadFileAttachment, 
-  getSampleAttachments, 
-  deleteFileAttachment, 
-  getFileContent 
+export {
+  uploadFileAttachment,
+  getSampleAttachments,
+  deleteFileAttachment,
+  getFileContent,
 } from './actions/nanopore/file-storage'
 
-export type { 
-  FileUploadResult, 
-  UploadFileInput 
+export type {
+  FileUploadResult,
+  UploadFileInput,
 } from './actions/nanopore/file-storage'
 
 export const appRouter = router({

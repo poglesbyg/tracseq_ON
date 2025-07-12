@@ -1,15 +1,15 @@
 'use client'
 
-import { 
-  Upload, 
-  FileText, 
-  AlertCircle, 
-  CheckCircle, 
-  Brain, 
+import {
+  Upload,
+  FileText,
+  AlertCircle,
+  CheckCircle,
+  Brain,
   Eye,
   X,
   Clock,
-  Zap
+  Zap,
 } from 'lucide-react'
 import { useCallback, useState, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
@@ -18,7 +18,10 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { nanoporeFormService, type NanoporeFormData } from '@/lib/ai/nanopore-llm-service'
+import {
+  nanoporeFormService,
+  type NanoporeFormData,
+} from '@/lib/ai/nanopore-llm-service'
 
 import PDFViewer from './pdf-viewer'
 
@@ -37,7 +40,11 @@ interface UploadedFile {
   processingTime?: number
 }
 
-export default function PDFUpload({ onDataExtracted, onFileUploaded, _sampleId }: PDFUploadProps) {
+export default function PDFUpload({
+  onDataExtracted,
+  onFileUploaded,
+  _sampleId,
+}: PDFUploadProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
   const [viewingFile, setViewingFile] = useState<UploadedFile | null>(null)
@@ -48,82 +55,94 @@ export default function PDFUpload({ onDataExtracted, onFileUploaded, _sampleId }
     setIsClient(true)
   }, [])
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    const newFiles: UploadedFile[] = acceptedFiles.map(file => ({
-      file,
-      id: `${Date.now()}-${Math.random()}`,
-      status: 'processing' as const,
-    }))
+  const onDrop = useCallback(
+    async (acceptedFiles: File[]) => {
+      const newFiles: UploadedFile[] = acceptedFiles.map((file) => ({
+        file,
+        id: `${Date.now()}-${Math.random()}`,
+        status: 'processing' as const,
+      }))
 
-    setUploadedFiles(prev => [...prev, ...newFiles])
-    setIsProcessing(true)
+      setUploadedFiles((prev) => [...prev, ...newFiles])
+      setIsProcessing(true)
 
-    // Process each file
-    for (const uploadedFile of newFiles) {
-      try {
-        // Call the file uploaded callback
-        onFileUploaded?.(uploadedFile.file)
+      // Process each file
+      for (const uploadedFile of newFiles) {
+        try {
+          // Call the file uploaded callback
+          onFileUploaded?.(uploadedFile.file)
 
-        // Extract data using AI
-        const startTime = Date.now()
-        const result = await nanoporeFormService.extractFormData(uploadedFile.file)
-        const processingTime = Date.now() - startTime
+          // Extract data using AI
+          const startTime = Date.now()
+          const result = await nanoporeFormService.extractFormData(
+            uploadedFile.file,
+          )
+          const processingTime = Date.now() - startTime
 
-        if (result.success && result.data) {
-          // Update file status
-          setUploadedFiles(prev => prev.map(f => 
-            f.id === uploadedFile.id 
-              ? { 
-                  ...f, 
-                  status: 'completed', 
-                  extractedData: result.data,
-                  processingTime 
-                }
-              : f
-          ))
+          if (result.success && result.data) {
+            // Update file status
+            setUploadedFiles((prev) =>
+              prev.map((f) =>
+                f.id === uploadedFile.id
+                  ? {
+                      ...f,
+                      status: 'completed',
+                      extractedData: result.data,
+                      processingTime,
+                    }
+                  : f,
+              ),
+            )
 
-          // Call the data extracted callback
-          onDataExtracted?.(result.data, uploadedFile.file)
-        } else {
-          // Update file with error
-          setUploadedFiles(prev => prev.map(f => 
-            f.id === uploadedFile.id 
-              ? { 
-                  ...f, 
-                  status: 'error', 
-                  error: result.error || 'Failed to extract data',
-                  processingTime 
-                }
-              : f
-          ))
+            // Call the data extracted callback
+            onDataExtracted?.(result.data, uploadedFile.file)
+          } else {
+            // Update file with error
+            setUploadedFiles((prev) =>
+              prev.map((f) =>
+                f.id === uploadedFile.id
+                  ? {
+                      ...f,
+                      status: 'error',
+                      error: result.error || 'Failed to extract data',
+                      processingTime,
+                    }
+                  : f,
+              ),
+            )
+          }
+        } catch (error) {
+          setUploadedFiles((prev) =>
+            prev.map((f) =>
+              f.id === uploadedFile.id
+                ? {
+                    ...f,
+                    status: 'error',
+                    error:
+                      error instanceof Error ? error.message : 'Unknown error',
+                  }
+                : f,
+            ),
+          )
         }
-      } catch (error) {
-        setUploadedFiles(prev => prev.map(f => 
-          f.id === uploadedFile.id 
-            ? { 
-                ...f, 
-                status: 'error', 
-                error: error instanceof Error ? error.message : 'Unknown error' 
-              }
-            : f
-        ))
       }
-    }
 
-    setIsProcessing(false)
-  }, [onDataExtracted, onFileUploaded])
+      setIsProcessing(false)
+    },
+    [onDataExtracted, onFileUploaded],
+  )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'application/pdf': ['.pdf']
+      'application/pdf': ['.pdf'],
     },
     multiple: true,
-    maxSize: 10 * 1024 * 1024 // 10MB
+    maxSize: 10 * 1024 * 1024, // 10MB
   })
 
   const removeFile = useCallback((fileId: string) => {
-    setUploadedFiles(prev => prev.filter(f => f.id !== fileId))
+    setUploadedFiles((prev) => prev.filter((f) => f.id !== fileId))
   }, [])
 
   const viewFile = useCallback((uploadedFile: UploadedFile) => {
@@ -137,7 +156,9 @@ export default function PDFUpload({ onDataExtracted, onFileUploaded, _sampleId }
   const getStatusIcon = (status: UploadedFile['status']) => {
     switch (status) {
       case 'processing':
-        return <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
+        return (
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
+        )
       case 'completed':
         return <CheckCircle className="h-4 w-4 text-green-600" />
       case 'error':
@@ -157,8 +178,12 @@ export default function PDFUpload({ onDataExtracted, onFileUploaded, _sampleId }
   }
 
   const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.8) {return 'bg-green-100 text-green-800'}
-    if (confidence >= 0.6) {return 'bg-yellow-100 text-yellow-800'}
+    if (confidence >= 0.8) {
+      return 'bg-green-100 text-green-800'
+    }
+    if (confidence >= 0.6) {
+      return 'bg-yellow-100 text-yellow-800'
+    }
     return 'bg-red-100 text-red-800'
   }
 
@@ -169,7 +194,12 @@ export default function PDFUpload({ onDataExtracted, onFileUploaded, _sampleId }
       case 'pattern':
         return <FileText className="h-3 w-3" />
       case 'hybrid':
-        return <><Brain className="h-2 w-2" /><FileText className="h-2 w-2" /></>
+        return (
+          <>
+            <Brain className="h-2 w-2" />
+            <FileText className="h-2 w-2" />
+          </>
+        )
       default:
         return <FileText className="h-3 w-3" />
     }
@@ -228,9 +258,10 @@ export default function PDFUpload({ onDataExtracted, onFileUploaded, _sampleId }
             {...getRootProps()}
             className={`
               border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-              ${isDragActive 
-                ? 'border-blue-400 bg-blue-50 dark:bg-blue-950' 
-                : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+              ${
+                isDragActive
+                  ? 'border-blue-400 bg-blue-50 dark:bg-blue-950'
+                  : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
               }
             `}
           >
@@ -241,7 +272,9 @@ export default function PDFUpload({ onDataExtracted, onFileUploaded, _sampleId }
               </div>
               <div>
                 <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                  {isDragActive ? 'Drop PDF files here' : 'Upload PDF Documents'}
+                  {isDragActive
+                    ? 'Drop PDF files here'
+                    : 'Upload PDF Documents'}
                 </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                   Drag & drop PDF files or click to browse (max 10MB each)
@@ -294,7 +327,7 @@ export default function PDFUpload({ onDataExtracted, onFileUploaded, _sampleId }
                     <div className="flex-shrink-0">
                       {getStatusIcon(uploadedFile.status)}
                     </div>
-                    
+
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2">
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
@@ -304,12 +337,12 @@ export default function PDFUpload({ onDataExtracted, onFileUploaded, _sampleId }
                           {uploadedFile.status}
                         </Badge>
                       </div>
-                      
+
                       <div className="flex items-center space-x-4 mt-1">
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           {(uploadedFile.file.size / 1024 / 1024).toFixed(2)} MB
                         </p>
-                        
+
                         {uploadedFile.processingTime && (
                           <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
                             <Clock className="h-3 w-3" />
@@ -321,22 +354,35 @@ export default function PDFUpload({ onDataExtracted, onFileUploaded, _sampleId }
                       {uploadedFile.extractedData && (
                         <div className="flex items-center space-x-4 mt-2">
                           <div className="flex items-center space-x-1">
-                            {getMethodIcon(uploadedFile.extractedData.extractionMethod)}
+                            {getMethodIcon(
+                              uploadedFile.extractedData.extractionMethod,
+                            )}
                             <span className="text-xs text-gray-600 dark:text-gray-400 capitalize">
                               {uploadedFile.extractedData.extractionMethod}
                             </span>
                           </div>
-                          
-                          <Badge className={getConfidenceColor(uploadedFile.extractedData.confidence)}>
-                            {Math.round(uploadedFile.extractedData.confidence * 100)}% confidence
+
+                          <Badge
+                            className={getConfidenceColor(
+                              uploadedFile.extractedData.confidence,
+                            )}
+                          >
+                            {Math.round(
+                              uploadedFile.extractedData.confidence * 100,
+                            )}
+                            % confidence
                           </Badge>
 
-                          {uploadedFile.extractedData.issues && uploadedFile.extractedData.issues.length > 0 && (
-                            <div className="flex items-center space-x-1 text-xs text-amber-600">
-                              <AlertCircle className="h-3 w-3" />
-                              <span>{uploadedFile.extractedData.issues.length} issues</span>
-                            </div>
-                          )}
+                          {uploadedFile.extractedData.issues &&
+                            uploadedFile.extractedData.issues.length > 0 && (
+                              <div className="flex items-center space-x-1 text-xs text-amber-600">
+                                <AlertCircle className="h-3 w-3" />
+                                <span>
+                                  {uploadedFile.extractedData.issues.length}{' '}
+                                  issues
+                                </span>
+                              </div>
+                            )}
                         </div>
                       )}
 
@@ -360,7 +406,7 @@ export default function PDFUpload({ onDataExtracted, onFileUploaded, _sampleId }
                         <span>View</span>
                       </Button>
                     )}
-                    
+
                     <Button
                       variant="outline"
                       size="sm"
@@ -378,4 +424,4 @@ export default function PDFUpload({ onDataExtracted, onFileUploaded, _sampleId }
       )}
     </div>
   )
-} 
+}

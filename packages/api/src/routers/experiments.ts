@@ -70,7 +70,11 @@ export const experimentsRouter = router({
   getById: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
-      return await experimentGetters.getExperimentById(ctx.db, input.id, ctx.user.id)
+      return await experimentGetters.getExperimentById(
+        ctx.db,
+        input.id,
+        ctx.user.id,
+      )
     }),
 
   // Get experiment with sequences
@@ -88,7 +92,11 @@ export const experimentsRouter = router({
   getDetails: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
-      return await experimentGetters.getExperimentDetails(ctx.db, input.id, ctx.user.id)
+      return await experimentGetters.getExperimentDetails(
+        ctx.db,
+        input.id,
+        ctx.user.id,
+      )
     }),
 
   // Get recent experiments for dashboard
@@ -145,7 +153,11 @@ export const experimentsRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
-      return await experimentSetters.deleteExperiment(ctx.db, input.id, ctx.user.id)
+      return await experimentSetters.deleteExperiment(
+        ctx.db,
+        input.id,
+        ctx.user.id,
+      )
     }),
 
   // Update experiment status
@@ -183,7 +195,11 @@ export const experimentsRouter = router({
         }),
       )
       .mutation(async ({ input, ctx }) => {
-        return await experimentSetters.updateSequence(ctx.db, input.id, input.data)
+        return await experimentSetters.updateSequence(
+          ctx.db,
+          input.id,
+          input.data,
+        )
       }),
 
     // Delete sequence
@@ -216,7 +232,11 @@ export const experimentsRouter = router({
         }),
       )
       .mutation(async ({ input, ctx }) => {
-        return await experimentSetters.updateGuideRna(ctx.db, input.id, input.data)
+        return await experimentSetters.updateGuideRna(
+          ctx.db,
+          input.id,
+          input.data,
+        )
       }),
   }),
 
@@ -230,7 +250,10 @@ export const experimentsRouter = router({
         }),
       )
       .mutation(async ({ input, ctx }) => {
-        return await experimentSetters.saveOffTargetSites(ctx.db, input.offTargetSites)
+        return await experimentSetters.saveOffTargetSites(
+          ctx.db,
+          input.offTargetSites,
+        )
       }),
   }),
 

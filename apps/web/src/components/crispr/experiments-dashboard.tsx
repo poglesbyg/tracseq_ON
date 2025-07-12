@@ -353,7 +353,8 @@ export default function ExperimentsDashboard() {
   })
 
   // Use mock data if there's an authentication error
-  const experiments = error?.data?.code === 'UNAUTHORIZED' ? mockExperiments : realExperiments
+  const experiments =
+    error?.data?.code === 'UNAUTHORIZED' ? mockExperiments : realExperiments
   const isUsingMockData = error?.data?.code === 'UNAUTHORIZED'
 
   const handleDelete = (id: string) => {
@@ -363,7 +364,9 @@ export default function ExperimentsDashboard() {
       )
     ) {
       if (isUsingMockData) {
-        alert('Development Mode: Delete functionality not available with mock data')
+        alert(
+          'Development Mode: Delete functionality not available with mock data',
+        )
       } else {
         console.log('Delete experiment:', id)
         alert('Delete functionality would be implemented here')
@@ -430,7 +433,9 @@ export default function ExperimentsDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-yellow-400 text-sm">
               <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-              <span>Development Mode: Using mock data (authentication disabled)</span>
+              <span>
+                Development Mode: Using mock data (authentication disabled)
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -464,11 +469,21 @@ export default function ExperimentsDashboard() {
 
       {/* Database Status Indicator */}
       <div className="fixed bottom-4 right-4">
-        <Card className={`${isUsingMockData ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-green-500/10 border-green-500/20'} backdrop-blur-sm`}>
+        <Card
+          className={`${isUsingMockData ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-green-500/10 border-green-500/20'} backdrop-blur-sm`}
+        >
           <CardContent className="p-3">
-            <div className={`flex items-center gap-2 ${isUsingMockData ? 'text-yellow-400' : 'text-green-400'} text-sm`}>
-              <div className={`w-2 h-2 ${isUsingMockData ? 'bg-yellow-400' : 'bg-green-400'} rounded-full animate-pulse`}></div>
-              <span>{isUsingMockData ? 'Development Mode (Mock Data)' : 'PostgreSQL Database Connected'}</span>
+            <div
+              className={`flex items-center gap-2 ${isUsingMockData ? 'text-yellow-400' : 'text-green-400'} text-sm`}
+            >
+              <div
+                className={`w-2 h-2 ${isUsingMockData ? 'bg-yellow-400' : 'bg-green-400'} rounded-full animate-pulse`}
+              ></div>
+              <span>
+                {isUsingMockData
+                  ? 'Development Mode (Mock Data)'
+                  : 'PostgreSQL Database Connected'}
+              </span>
             </div>
           </CardContent>
         </Card>

@@ -1,5 +1,4 @@
-import { ThemeProvider } from 'next-themes'
-
+import { UNCLayout } from '../layout/unc-layout'
 import { TrpcProvider } from '../providers/trpc-provider'
 import { Toaster } from '../ui/sonner'
 
@@ -7,11 +6,11 @@ import { CrisprStudio } from './crispr-studio'
 
 export function CrisprStudioApp() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-      <TrpcProvider>
+    <TrpcProvider>
+      <UNCLayout>
         <CrisprStudio />
         <Toaster />
-      </TrpcProvider>
-    </ThemeProvider>
+      </UNCLayout>
+    </TrpcProvider>
   )
-} 
+}

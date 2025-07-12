@@ -1,6 +1,7 @@
-import { Button } from './button'
 import { Search, Menu, X } from 'lucide-react'
 import { useState } from 'react'
+
+import { Button } from './button'
 
 export function UNCHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -59,7 +60,7 @@ export function UNCHeader() {
               <Search className="h-4 w-4" />
               <span className="sr-only">Search</span>
             </Button>
-            
+
             {/* Mobile Menu Button */}
             <Button
               variant="ghost"
@@ -67,7 +68,11 @@ export function UNCHeader() {
               className="md:hidden text-gray-600 hover:text-blue-600"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
-              {isMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+              {isMenuOpen ? (
+                <X className="h-4 w-4" />
+              ) : (
+                <Menu className="h-4 w-4" />
+              )}
               <span className="sr-only">Toggle menu</span>
             </Button>
           </div>
@@ -93,4 +98,4 @@ export function UNCHeader() {
       </div>
     </header>
   )
-} 
+}

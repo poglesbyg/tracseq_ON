@@ -44,12 +44,14 @@ export async function getNanoporeSampleById(
   sampleId: string,
   userId: string,
 ): Promise<Selectable<NanoporeSample> | null> {
-  return await db
-    .selectFrom('nanoporeSamples')
-    .selectAll()
-    .where('id', '=', sampleId)
-    .where('createdBy', '=', userId)
-    .executeTakeFirst() || null
+  return (
+    (await db
+      .selectFrom('nanoporeSamples')
+      .selectAll()
+      .where('id', '=', sampleId)
+      .where('createdBy', '=', userId)
+      .executeTakeFirst()) || null
+  )
 }
 
 /**
@@ -259,4 +261,4 @@ export async function getSampleAttachments(
     .where('sampleId', '=', sampleId)
     .orderBy('uploadedAt', 'desc')
     .execute()
-} 
+}

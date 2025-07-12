@@ -54,14 +54,25 @@ const updateNanoporeSampleSchema = z.object({
   totalAmount: z.number().positive().optional(),
   flowCellType: z.string().optional(),
   flowCellCount: z.number().int().positive().optional(),
-  status: z.enum(['submitted', 'prep', 'sequencing', 'analysis', 'completed', 'archived']).optional(),
+  status: z
+    .enum([
+      'submitted',
+      'prep',
+      'sequencing',
+      'analysis',
+      'completed',
+      'archived',
+    ])
+    .optional(),
   priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
   assignedTo: z.string().optional(),
   libraryPrepBy: z.string().optional(),
 })
 
 const updateProcessingStepSchema = z.object({
-  stepStatus: z.enum(['pending', 'in_progress', 'completed', 'failed', 'skipped']).optional(),
+  stepStatus: z
+    .enum(['pending', 'in_progress', 'completed', 'failed', 'skipped'])
+    .optional(),
   assignedTo: z.string().optional(),
   notes: z.string().optional(),
   resultsData: z.any().optional(),
@@ -77,7 +88,11 @@ export const nanoporeRouter = router({
   getById: publicProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
-      return await nanoporeGetters.getNanoporeSampleById(ctx.db, input.id, 'demo-user')
+      return await nanoporeGetters.getNanoporeSampleById(
+        ctx.db,
+        input.id,
+        'demo-user',
+      )
     }),
 
   // Get nanopore sample with details
@@ -95,7 +110,11 @@ export const nanoporeRouter = router({
   getFull: publicProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
-      return await nanoporeGetters.getNanoporeSampleFull(ctx.db, input.id, 'demo-user')
+      return await nanoporeGetters.getNanoporeSampleFull(
+        ctx.db,
+        input.id,
+        'demo-user',
+      )
     }),
 
   // Get recent nanopore samples for dashboard
@@ -135,7 +154,10 @@ export const nanoporeRouter = router({
   getByAssignee: publicProcedure
     .input(z.object({ assignedTo: z.string() }))
     .query(async ({ input, ctx }) => {
-      return await nanoporeGetters.getNanoporeSamplesByAssignee(ctx.db, input.assignedTo)
+      return await nanoporeGetters.getNanoporeSamplesByAssignee(
+        ctx.db,
+        input.assignedTo,
+      )
     }),
 
   // Get all nanopore samples (team view)
@@ -201,7 +223,14 @@ export const nanoporeRouter = router({
     .input(
       z.object({
         id: z.string().uuid(),
-        status: z.enum(['submitted', 'prep', 'sequencing', 'analysis', 'completed', 'archived']),
+        status: z.enum([
+          'submitted',
+          'prep',
+          'sequencing',
+          'analysis',
+          'completed',
+          'archived',
+        ]),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -235,7 +264,11 @@ export const nanoporeRouter = router({
   delete: publicProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
-      return await nanoporeSetters.deleteNanoporeSample(ctx.db, input.id, 'demo-user')
+      return await nanoporeSetters.deleteNanoporeSample(
+        ctx.db,
+        input.id,
+        'demo-user',
+      )
     }),
 
   // Sample details management
@@ -285,7 +318,10 @@ export const nanoporeRouter = router({
     createDefault: publicProcedure
       .input(z.object({ sampleId: z.string().uuid() }))
       .mutation(async ({ input, ctx }) => {
-        return await nanoporeSetters.createDefaultProcessingSteps(ctx.db, input.sampleId)
+        return await nanoporeSetters.createDefaultProcessingSteps(
+          ctx.db,
+          input.sampleId,
+        )
       }),
 
     // Update processing step
@@ -297,7 +333,11 @@ export const nanoporeRouter = router({
         }),
       )
       .mutation(async ({ input, ctx }) => {
-        return await nanoporeSetters.updateProcessingStep(ctx.db, input.stepId, input.data)
+        return await nanoporeSetters.updateProcessingStep(
+          ctx.db,
+          input.stepId,
+          input.data,
+        )
       }),
 
     // Start processing step
@@ -363,7 +403,7 @@ export const nanoporeRouter = router({
         const buffer = Buffer.from(input.file.content, 'base64')
         const arrayBuffer = buffer.buffer.slice(
           buffer.byteOffset,
-          buffer.byteOffset + buffer.byteLength
+          buffer.byteOffset + buffer.byteLength,
         )
 
         return await fileStorage.uploadFileAttachment(ctx.db, {
@@ -385,9 +425,9 @@ export const nanoporeRouter = router({
       .query(async ({ input, ctx }) => {
         const { content, attachment } = await fileStorage.getFileContent(
           ctx.db,
-          input.attachmentId
+          input.attachmentId,
         )
-        
+
         return {
           content: content.toString('base64'),
           fileName: attachment.fileName,
@@ -419,7 +459,10 @@ export const nanoporeRouter = router({
     delete: publicProcedure
       .input(z.object({ attachmentId: z.string().uuid() }))
       .mutation(async ({ input, ctx }) => {
-        return await fileStorage.deleteFileAttachment(ctx.db, input.attachmentId)
+        return await fileStorage.deleteFileAttachment(
+          ctx.db,
+          input.attachmentId,
+        )
       }),
   }),
-}) 
+})

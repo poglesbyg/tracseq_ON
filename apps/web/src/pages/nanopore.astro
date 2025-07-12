@@ -4,9 +4,13 @@ import { NanoporeApp } from '@/components/nanopore/nanopore-app'
 ---
 
 <Layout title="Nanopore Sequencing">
-  <div id="nanopore-loading" class="min-h-screen bg-background text-foreground flex items-center justify-center">
+  <div
+    id="nanopore-loading"
+    class="min-h-screen bg-background text-foreground flex items-center justify-center"
+  >
     <div class="flex items-center space-x-2">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary">
+      </div>
       <span class="text-lg">Loading Nanopore Dashboard...</span>
     </div>
   </div>
@@ -20,7 +24,7 @@ import { NanoporeApp } from '@/components/nanopore/nanopore-app'
   function handleNanoporeLoad() {
     const loadingElement = document.getElementById('nanopore-loading')
     const appElement = document.getElementById('nanopore-app')
-    
+
     if (loadingElement && appElement) {
       // Wait for React component to mount
       setTimeout(() => {
@@ -35,17 +39,3 @@ import { NanoporeApp } from '@/components/nanopore/nanopore-app'
   document.addEventListener('astro:page-load', handleNanoporeLoad)
 </script>
 
-<style>
-  /* Ensure dark theme variables are available immediately */
-  :root {
-    --background: oklch(0.13 0.028 261.692);
-    --foreground: oklch(0.985 0.002 247.839);
-    --primary: oklch(0.928 0.006 264.531);
-  }
-  
-  /* Ensure body has dark background immediately */
-  body {
-    background-color: oklch(0.13 0.028 261.692) !important;
-    color: oklch(0.985 0.002 247.839) !important;
-  }
-</style> 

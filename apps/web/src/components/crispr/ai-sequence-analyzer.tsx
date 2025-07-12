@@ -1,13 +1,13 @@
 import { motion } from 'framer-motion'
-import { 
-  Brain, 
-  Sparkles, 
-  TrendingUp, 
-  CheckCircle, 
+import {
+  Brain,
+  Sparkles,
+  TrendingUp,
+  CheckCircle,
   Loader2,
   Lightbulb,
   Target,
-  Zap
+  Zap,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
@@ -29,10 +29,10 @@ interface AISequenceAnalyzerProps {
   onAnalysisComplete?: (analysis: AIAnalysisResult) => void
 }
 
-export function AISequenceAnalyzer({ 
-  sequence, 
-  context, 
-  onAnalysisComplete 
+export function AISequenceAnalyzer({
+  sequence,
+  context,
+  onAnalysisComplete,
 }: AISequenceAnalyzerProps) {
   const [analysis, setAnalysis] = useState<AIAnalysisResult | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -48,7 +48,7 @@ export function AISequenceAnalyzer({
     }
 
     setIsAnalyzing(true)
-    
+
     try {
       const result = await aiService.analyzeSequence(sequence, context)
       setAnalysis(result)
@@ -61,14 +61,22 @@ export function AISequenceAnalyzer({
   }
 
   const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.8) {return 'text-green-400'}
-    if (confidence >= 0.6) {return 'text-yellow-400'}
+    if (confidence >= 0.8) {
+      return 'text-green-400'
+    }
+    if (confidence >= 0.6) {
+      return 'text-yellow-400'
+    }
     return 'text-red-400'
   }
 
   const getConfidenceLabel = (confidence: number) => {
-    if (confidence >= 0.8) {return 'High Confidence'}
-    if (confidence >= 0.6) {return 'Medium Confidence'}
+    if (confidence >= 0.8) {
+      return 'High Confidence'
+    }
+    if (confidence >= 0.6) {
+      return 'Medium Confidence'
+    }
     return 'Low Confidence'
   }
 
@@ -99,15 +107,19 @@ export function AISequenceAnalyzer({
                 <Brain className="h-5 w-5 text-white" />
               </div>
               <div>
-                <CardTitle className="text-white">AI Sequence Analysis</CardTitle>
+                <CardTitle className="text-white">
+                  AI Sequence Analysis
+                </CardTitle>
                 <CardDescription className="text-slate-400">
-                  {isAIAvailable ? 'Powered by Ollama LLM' : 'Algorithmic Analysis (AI Offline)'}
+                  {isAIAvailable
+                    ? 'Powered by Ollama LLM'
+                    : 'Algorithmic Analysis (AI Offline)'}
                 </CardDescription>
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Badge 
-                variant="outline" 
+              <Badge
+                variant="outline"
                 className={`${isAIAvailable ? 'border-green-500/50 text-green-400' : 'border-yellow-500/50 text-yellow-400'}`}
               >
                 {isAIAvailable ? (
@@ -129,7 +141,7 @@ export function AISequenceAnalyzer({
         <CardContent className="space-y-4">
           {!analysis && !isAnalyzing && (
             <div className="text-center">
-              <Button 
+              <Button
                 onClick={performAIAnalysis}
                 className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg transition-all duration-200"
               >
@@ -152,9 +164,13 @@ export function AISequenceAnalyzer({
               >
                 <Loader2 className="h-8 w-8 text-purple-400" />
               </motion.div>
-              <p className="text-white mb-2">AI is analyzing your sequence...</p>
+              <p className="text-white mb-2">
+                AI is analyzing your sequence...
+              </p>
               <p className="text-slate-400 text-sm">
-                {isAIAvailable ? 'Consulting Ollama LLM for expert insights' : 'Running algorithmic analysis'}
+                {isAIAvailable
+                  ? 'Consulting Ollama LLM for expert insights'
+                  : 'Running algorithmic analysis'}
               </p>
               <div className="mt-4 max-w-xs mx-auto">
                 <div className="bg-slate-800 rounded-full h-2 overflow-hidden">
@@ -178,17 +194,21 @@ export function AISequenceAnalyzer({
               {/* Confidence Score */}
               <div className="flex items-center justify-between p-3 bg-white/10 rounded-lg">
                 <div className="flex items-center space-x-2">
-                  <TrendingUp className={`h-4 w-4 ${getConfidenceColor(analysis.confidence)}`} />
+                  <TrendingUp
+                    className={`h-4 w-4 ${getConfidenceColor(analysis.confidence)}`}
+                  />
                   <span className="text-white text-sm font-medium">
                     {getConfidenceLabel(analysis.confidence)}
                   </span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Progress 
-                    value={analysis.confidence * 100} 
+                  <Progress
+                    value={analysis.confidence * 100}
                     className="w-16 h-2"
                   />
-                  <span className={`text-sm ${getConfidenceColor(analysis.confidence)}`}>
+                  <span
+                    className={`text-sm ${getConfidenceColor(analysis.confidence)}`}
+                  >
                     {(analysis.confidence * 100).toFixed(0)}%
                   </span>
                 </div>
@@ -199,7 +219,9 @@ export function AISequenceAnalyzer({
                 <div className="flex items-start space-x-2">
                   <CheckCircle className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
                   <div>
-                    <h4 className="text-white font-medium mb-1">Analysis Summary</h4>
+                    <h4 className="text-white font-medium mb-1">
+                      Analysis Summary
+                    </h4>
                     <p className="text-slate-300 text-sm leading-relaxed">
                       {analysis.analysis}
                     </p>
@@ -211,7 +233,9 @@ export function AISequenceAnalyzer({
                   <div className="flex items-start space-x-2">
                     <Lightbulb className="h-5 w-5 text-yellow-400 mt-0.5 flex-shrink-0" />
                     <div>
-                      <h4 className="text-white font-medium mb-1">AI Reasoning</h4>
+                      <h4 className="text-white font-medium mb-1">
+                        AI Reasoning
+                      </h4>
                       <p className="text-slate-300 text-sm leading-relaxed">
                         {analysis.reasoning}
                       </p>
@@ -225,7 +249,9 @@ export function AISequenceAnalyzer({
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
                     <Target className="h-4 w-4 text-purple-400" />
-                    <h4 className="text-white font-medium">AI Recommendations</h4>
+                    <h4 className="text-white font-medium">
+                      AI Recommendations
+                    </h4>
                   </div>
                   <div className="space-y-2">
                     {analysis.suggestions.map((suggestion, index) => (
@@ -246,7 +272,7 @@ export function AISequenceAnalyzer({
 
               {/* Reanalyze Button */}
               <div className="pt-2">
-                <Button 
+                <Button
                   onClick={performAIAnalysis}
                   variant="outline"
                   size="sm"
@@ -262,4 +288,4 @@ export function AISequenceAnalyzer({
       </Card>
     </motion.div>
   )
-} 
+}

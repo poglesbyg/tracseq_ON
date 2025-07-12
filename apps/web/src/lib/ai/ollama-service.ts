@@ -33,51 +33,65 @@ class OllamaService {
     try {
       // Check if Ollama is running and model is available
       const models = await ollama.list()
-      this.isAvailable = models.models.some(m => m.name === this.model || m.name.includes(this.model.split(':')[0]))
-      
+      this.isAvailable = models.models.some(
+        (m) =>
+          m.name === this.model || m.name.includes(this.model.split(':')[0]),
+      )
+
       if (!this.isAvailable) {
         // Try different model names that might work
         const modelVariants = [
           'llama3.1:latest',
-          'llama3.1:8b', 
+          'llama3.1:8b',
           'llama3.1',
           'llama3:latest',
           'llama3:8b',
-          'llama3'
+          'llama3',
         ]
-        
+
         console.log('🔍 Testing model variants...')
-        
+
         for (const modelName of modelVariants) {
           try {
             console.log(`Testing ${modelName}...`)
             const testResponse = await ollama.generate({
               model: modelName,
-              prompt: "Test",
+              prompt: 'Test',
               stream: false,
-              options: { temperature: 0.1 }
+              options: { temperature: 0.1 },
             })
-            
+
             if (testResponse.response) {
               this.workingModel = modelName
               this.model = modelName
               this.isAvailable = true
-              console.log(`✅ Ollama AI service initialized with model: ${modelName} (found working model)`)
+              console.log(
+                `✅ Ollama AI service initialized with model: ${modelName} (found working model)`,
+              )
               return true
             }
           } catch {
             console.log(`❌ ${modelName} failed`)
           }
         }
-        
-        console.warn(`Ollama models not accessible. AI features will use advanced fallback responses.`)
-        console.log('Available models via API:', models.models.map(m => m.name))
-        console.log('💡 Tip: Try running "ollama run llama3.1" in terminal to ensure model is loaded')
+
+        console.warn(
+          `Ollama models not accessible. AI features will use advanced fallback responses.`,
+        )
+        console.log(
+          'Available models via API:',
+          models.models.map((m) => m.name),
+        )
+        console.log(
+          '💡 Tip: Try running "ollama run llama3.1" in terminal to ensure model is loaded',
+        )
       } else {
         this.workingModel = this.model
-        console.log(`✅ Ollama AI service initialized with model: ${this.model}`)
+        console.log(
+          `✅ Ollama AI service initialized with model: ${this.model}`,
+        )
       }
-      
+
       return this.isAvailable
     } catch (error) {
       console.warn('Ollama not available:', error)
@@ -86,7 +100,10 @@ class OllamaService {
     }
   }
 
-  async analyzeSequence(sequence: string, context?: string): Promise<AIAnalysisResult> {
+  async analyzeSequence(
+    sequence: string,
+    context?: string,
+  ): Promise<AIAnalysisResult> {
     if (!this.isAvailable) {
       return this.getFallbackSequenceAnalysis(sequence)
     }
@@ -115,7 +132,7 @@ Respond in JSON format with: analysis, suggestions (array), confidence (0-1), re
         options: {
           temperature: 0.7,
           top_p: 0.9,
-        }
+        },
       })
 
       return this.parseAIResponse(response.response, 'sequence_analysis')
@@ -126,9 +143,9 @@ Respond in JSON format with: analysis, suggestions (array), confidence (0-1), re
   }
 
   async optimizeGuideRNA(
-    guideSequence: string, 
-    targetSequence: string, 
-    pamSequence: string
+    guideSequence: string,
+    targetSequence: string,
+    pamSequence: string,
   ): Promise<GuideOptimizationResult> {
     if (!this.isAvailable) {
       return this.getFallbackGuideOptimization(guideSequence)
@@ -160,7 +177,7 @@ Respond in JSON format with: optimizedSequence, improvements (array), riskAssess
         options: {
           temperature: 0.6,
           top_p: 0.8,
-        }
+        },
       })
 
       return this.parseGuideOptimization(response.response)
@@ -173,7 +190,7 @@ Respond in JSON format with: optimizedSequence, improvements (array), riskAssess
   async generateExperimentSuggestions(
     experimentType: string,
     targetGene?: string,
-    organism?: string
+    organism?: string,
   ): Promise<ExperimentSuggestion[]> {
     if (!this.isAvailable) {
       return this.getFallbackExperimentSuggestions(experimentType)
@@ -204,7 +221,7 @@ Respond in JSON format as an array of objects with: title, description, rational
         options: {
           temperature: 0.8,
           top_p: 0.9,
-        }
+        },
       })
 
       return this.parseExperimentSuggestions(response.response)
@@ -239,7 +256,7 @@ Be specific and actionable when possible.
         options: {
           temperature: 0.7,
           top_p: 0.9,
-        }
+        },
       })
 
       return response.response
@@ -254,16 +271,22 @@ Be specific and actionable when possible.
       const parsed = JSON.parse(response)
       return {
         analysis: parsed.analysis || 'Analysis completed',
-        suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
-        confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.8,
-        reasoning: parsed.reasoning || 'AI analysis performed'
+        suggestions: Array.isArray(parsed.suggestions)
+          ? parsed.suggestions
+          : [],
+        confidence:
+          typeof parsed.confidence === 'number' ? parsed.confidence : 0.8,
+        reasoning: parsed.reasoning || 'AI analysis performed',
       }
     } catch {
       return {
         analysis: response.slice(0, 500),
-        suggestions: ['Review sequence manually', 'Consider alternative approaches'],
+        suggestions: [
+          'Review sequence manually',
+          'Consider alternative approaches',
+        ],
         confidence: 0.6,
-        reasoning: 'Response parsing failed, using raw output'
+        reasoning: 'Response parsing failed, using raw output',
       }
     }
   }
@@ -273,15 +296,18 @@ Be specific and actionable when possible.
       const parsed = JSON.parse(response)
       return {
         optimizedSequence: parsed.optimizedSequence,
-        improvements: Array.isArray(parsed.improvements) ? parsed.improvements : [],
+        improvements: Array.isArray(parsed.improvements)
+          ? parsed.improvements
+          : [],
         riskAssessment: parsed.riskAssessment || 'Standard risk profile',
-        confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.7
+        confidence:
+          typeof parsed.confidence === 'number' ? parsed.confidence : 0.7,
       }
     } catch {
       return {
         improvements: ['Consider manual optimization', 'Review GC content'],
         riskAssessment: 'Unable to assess - manual review recommended',
-        confidence: 0.5
+        confidence: 0.5,
       }
     }
   }
@@ -290,92 +316,113 @@ Be specific and actionable when possible.
     try {
       const parsed = JSON.parse(response)
       if (Array.isArray(parsed)) {
-        return parsed.map(item => ({
+        return parsed.map((item) => ({
           title: item.title || 'Experimental Approach',
           description: item.description || 'Description not available',
           rationale: item.rationale || 'Rationale not provided',
-          priority: ['high', 'medium', 'low'].includes(item.priority) ? item.priority : 'medium'
+          priority: ['high', 'medium', 'low'].includes(item.priority)
+            ? item.priority
+            : 'medium',
         }))
       }
     } catch {
       // Fallback handled below
     }
-    
+
     return this.getFallbackExperimentSuggestions('general')
   }
 
   // Fallback methods for when AI is not available
   private getFallbackSequenceAnalysis(sequence: string): AIAnalysisResult {
-    const gcContent = (sequence.match(/[CG]/g) || []).length / sequence.length * 100
+    const gcContent =
+      ((sequence.match(/[CG]/g) || []).length / sequence.length) * 100
     const length = sequence.length
-    
+
     // More sophisticated fallback analysis
     const hasRepeats = /(.{3,})\1{2,}/.test(sequence)
     const hasLowComplexity = /([ACGT])\1{4,}/.test(sequence)
-    const pamSites = (sequence.match(/[ACGT]GG/g) || []).length + (sequence.match(/CC[ACGT]/g) || []).length
-    
+    const pamSites =
+      (sequence.match(/[ACGT]GG/g) || []).length +
+      (sequence.match(/CC[ACGT]/g) || []).length
+
     let analysis = `Sequence analysis: ${length} bp with ${gcContent.toFixed(1)}% GC content. `
-    
+
     if (gcContent < 20) {
-      analysis += 'Low GC content may reduce guide RNA stability and efficiency. '
+      analysis +=
+        'Low GC content may reduce guide RNA stability and efficiency. '
     } else if (gcContent > 80) {
-      analysis += 'High GC content may cause secondary structures and reduce accessibility. '
+      analysis +=
+        'High GC content may cause secondary structures and reduce accessibility. '
     } else if (gcContent >= 40 && gcContent <= 60) {
       analysis += 'Optimal GC content for efficient guide RNA design. '
     } else {
       analysis += 'GC content is within acceptable range. '
     }
-    
+
     analysis += `Found ${pamSites} potential PAM sites (NGG/CCN). `
-    
+
     if (hasRepeats) {
-      analysis += 'Contains repetitive sequences that may complicate guide design. '
+      analysis +=
+        'Contains repetitive sequences that may complicate guide design. '
     }
-    
+
     if (hasLowComplexity) {
-      analysis += 'Contains low-complexity regions that should be avoided for guide placement. '
+      analysis +=
+        'Contains low-complexity regions that should be avoided for guide placement. '
     }
-    
+
     const suggestions = [
       'Verify sequence quality and remove any ambiguous bases',
       'Consider multiple guide options across the target region',
-      'Validate PAM site availability in target context'
+      'Validate PAM site availability in target context',
     ]
-    
+
     if (gcContent < 40) {
-      suggestions.push('Consider guides with higher GC content within the target region')
+      suggestions.push(
+        'Consider guides with higher GC content within the target region',
+      )
     }
-    
+
     if (gcContent > 60) {
-      suggestions.push('Avoid guides with excessive GC content to prevent secondary structures')
+      suggestions.push(
+        'Avoid guides with excessive GC content to prevent secondary structures',
+      )
     }
-    
+
     if (hasRepeats) {
-      suggestions.push('Avoid repetitive regions when selecting guide RNA sequences')
+      suggestions.push(
+        'Avoid repetitive regions when selecting guide RNA sequences',
+      )
     }
-    
+
     if (pamSites < 3) {
-      suggestions.push('Limited PAM sites available - consider alternative target regions')
+      suggestions.push(
+        'Limited PAM sites available - consider alternative target regions',
+      )
     }
-    
+
     return {
       analysis,
       suggestions,
       confidence: 0.75,
-      reasoning: 'Advanced algorithmic analysis with CRISPR-specific heuristics (Ollama AI not available - install and run Ollama for enhanced AI insights)'
+      reasoning:
+        'Advanced algorithmic analysis with CRISPR-specific heuristics (Ollama AI not available - install and run Ollama for enhanced AI insights)',
     }
   }
 
-  private getFallbackGuideOptimization(guideSequence: string): GuideOptimizationResult {
-    const gcContent = (guideSequence.match(/[CG]/g) || []).length / guideSequence.length * 100
+  private getFallbackGuideOptimization(
+    guideSequence: string,
+  ): GuideOptimizationResult {
+    const gcContent =
+      ((guideSequence.match(/[CG]/g) || []).length / guideSequence.length) * 100
     const hasLongRuns = /([ACGT])\1{3,}/.test(guideSequence)
     const hasPolyT = /TTTT/.test(guideSequence)
     const startsWithG = guideSequence.startsWith('G')
     const endsWithGG = guideSequence.endsWith('GG')
-    
+
     const improvements = []
     let riskLevel = 'Low'
-    
+
     if (gcContent < 40) {
       improvements.push('Increase GC content to 40-60% for better stability')
       riskLevel = 'Moderate'
@@ -385,76 +432,101 @@ Be specific and actionable when possible.
     } else {
       improvements.push('GC content is optimal (40-60%)')
     }
-    
+
     if (hasLongRuns) {
-      improvements.push('Avoid long runs of identical nucleotides (4+ in a row)')
+      improvements.push(
+        'Avoid long runs of identical nucleotides (4+ in a row)',
+      )
       riskLevel = 'High'
     }
-    
+
     if (hasPolyT) {
-      improvements.push('Avoid poly-T sequences which can cause transcription termination')
+      improvements.push(
+        'Avoid poly-T sequences which can cause transcription termination',
+      )
       riskLevel = 'High'
     }
-    
+
     if (!startsWithG) {
-      improvements.push('Consider guides starting with G for better transcription')
+      improvements.push(
+        'Consider guides starting with G for better transcription',
+      )
     }
-    
+
     if (endsWithGG) {
       improvements.push('Guide ends with GG - good for PAM recognition')
     }
-    
+
     // Position-specific recommendations
-    improvements.push('Validate guide position 10-20 bp upstream of PAM for optimal cutting', 'Check for potential off-target sites using BLAST or similar tools', 'Consider multiple guides targeting the same region for redundancy')
-    
+    improvements.push(
+      'Validate guide position 10-20 bp upstream of PAM for optimal cutting',
+      'Check for potential off-target sites using BLAST or similar tools',
+      'Consider multiple guides targeting the same region for redundancy',
+    )
+
     const riskAssessment = `${riskLevel} risk - ${
-      riskLevel === 'Low' ? 'Guide sequence appears well-optimized' :
-      riskLevel === 'Moderate' ? 'Some optimization recommended before use' :
-      'Significant optimization needed - consider alternative sequences'
+      riskLevel === 'Low'
+        ? 'Guide sequence appears well-optimized'
+        : riskLevel === 'Moderate'
+          ? 'Some optimization recommended before use'
+          : 'Significant optimization needed - consider alternative sequences'
     }`
-    
+
     return {
       improvements,
       riskAssessment,
-      confidence: 0.7
+      confidence: 0.7,
     }
   }
 
-  private getFallbackExperimentSuggestions(experimentType: string): ExperimentSuggestion[] {
+  private getFallbackExperimentSuggestions(
+    experimentType: string,
+  ): ExperimentSuggestion[] {
     const suggestions = {
       knockout: [
         {
           title: 'Functional Knockout Validation',
-          description: 'Design multiple guides targeting different exons to confirm phenotype consistency',
-          rationale: 'Multiple independent knockouts reduce off-target concerns and validate true gene function',
-          priority: 'high' as const
+          description:
+            'Design multiple guides targeting different exons to confirm phenotype consistency',
+          rationale:
+            'Multiple independent knockouts reduce off-target concerns and validate true gene function',
+          priority: 'high' as const,
         },
         {
           title: 'Rescue Experiment Design',
-          description: 'Plan complementation experiments with wild-type gene reintroduction',
-          rationale: 'Rescue experiments provide definitive proof that observed phenotypes are due to target gene loss',
-          priority: 'medium' as const
-        }
+          description:
+            'Plan complementation experiments with wild-type gene reintroduction',
+          rationale:
+            'Rescue experiments provide definitive proof that observed phenotypes are due to target gene loss',
+          priority: 'medium' as const,
+        },
       ],
       knockin: [
         {
           title: 'Homology-Directed Repair Optimization',
-          description: 'Test different donor template designs and delivery methods',
-          rationale: 'HDR efficiency varies significantly with template design and experimental conditions',
-          priority: 'high' as const
-        }
+          description:
+            'Test different donor template designs and delivery methods',
+          rationale:
+            'HDR efficiency varies significantly with template design and experimental conditions',
+          priority: 'high' as const,
+        },
       ],
       screening: [
         {
           title: 'Pooled CRISPR Screen Design',
-          description: 'Design comprehensive library targeting gene family or pathway of interest',
-          rationale: 'Systematic screening can reveal unexpected gene interactions and redundancies',
-          priority: 'high' as const
-        }
-      ]
+          description:
+            'Design comprehensive library targeting gene family or pathway of interest',
+          rationale:
+            'Systematic screening can reveal unexpected gene interactions and redundancies',
+          priority: 'high' as const,
+        },
+      ],
     }
 
-    return suggestions[experimentType as keyof typeof suggestions] || suggestions.knockout
+    return (
+      suggestions[experimentType as keyof typeof suggestions] ||
+      suggestions.knockout
+    )
   }
 
   private getFallbackAnswer(question: string): string {
@@ -470,7 +542,12 @@ Be specific and actionable when possible.
   async setModel(modelName: string): Promise<boolean> {
     try {
       const models = await ollama.list()
-      if (models.models.some(m => m.name === modelName || m.name.includes(modelName.split(':')[0]))) {
+      if (
+        models.models.some(
+          (m) =>
+            m.name === modelName || m.name.includes(modelName.split(':')[0]),
+        )
+      ) {
         this.model = modelName
         this.isAvailable = true
         console.log(`✅ Switched to model: ${modelName}`)
@@ -487,4 +564,4 @@ Be specific and actionable when possible.
 export const aiService = new OllamaService()
 
 // Initialize on module load
-aiService.initialize().catch(console.error) 
+aiService.initialize().catch(console.error)

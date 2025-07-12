@@ -2,12 +2,24 @@ import { ExternalLink } from 'lucide-react'
 
 export function UtilityBar() {
   const utilityLinks = [
-    { label: 'Accessibility', href: 'https://accessibility.unc.edu/report-a-barrier/', external: true },
+    {
+      label: 'Accessibility',
+      href: 'https://accessibility.unc.edu/report-a-barrier/',
+      external: true,
+    },
     { label: 'Events', href: 'https://events.unc.edu/', external: true },
     { label: 'Libraries', href: 'https://library.unc.edu/', external: true },
     { label: 'Maps', href: 'https://maps.unc.edu/', external: true },
-    { label: 'Departments', href: 'https://www.unc.edu/departments/', external: true },
-    { label: 'ConnectCarolina', href: 'https://connectcarolina.unc.edu/', external: true },
+    {
+      label: 'Departments',
+      href: 'https://www.unc.edu/departments/',
+      external: true,
+    },
+    {
+      label: 'ConnectCarolina',
+      href: 'https://connectcarolina.unc.edu/',
+      external: true,
+    },
   ]
 
   return (
@@ -33,4 +45,4 @@ export function UtilityBar() {
       </div>
     </div>
   )
-} 
+}

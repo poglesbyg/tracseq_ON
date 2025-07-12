@@ -9,13 +9,18 @@ import type {
 import type { Selectable, Insertable, Updateable, Kysely } from 'kysely'
 
 export interface CreateNanoporeSampleInput extends Insertable<NanoporeSample> {}
-export interface CreateNanoporeSampleDetailInput extends Insertable<NanoporeSampleDetail> {}
-export interface CreateNanoporeProcessingStepInput extends Insertable<NanoporeProcessingStep> {}
-export interface CreateNanoporeAttachmentInput extends Insertable<NanoporeAttachment> {}
+export interface CreateNanoporeSampleDetailInput
+  extends Insertable<NanoporeSampleDetail> {}
+export interface CreateNanoporeProcessingStepInput
+  extends Insertable<NanoporeProcessingStep> {}
+export interface CreateNanoporeAttachmentInput
+  extends Insertable<NanoporeAttachment> {}
 
 export interface UpdateNanoporeSampleInput extends Updateable<NanoporeSample> {}
-export interface UpdateNanoporeSampleDetailInput extends Updateable<NanoporeSampleDetail> {}
-export interface UpdateNanoporeProcessingStepInput extends Updateable<NanoporeProcessingStep> {}
+export interface UpdateNanoporeSampleDetailInput
+  extends Updateable<NanoporeSampleDetail> {}
+export interface UpdateNanoporeProcessingStepInput
+  extends Updateable<NanoporeProcessingStep> {}
 
 /**
  * Create a new nanopore sample
@@ -438,4 +443,4 @@ export async function createCompleteNanoporeSample(
       processingSteps,
     }
   })
-} 
+}
