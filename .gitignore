@@ -210,6 +210,10 @@ test-results/
 playwright-report/
 playwright/.cache/
 
+# Devlooper
+tools/devlooper/
+generated/
+
 # Docker
 .dockerignore
 

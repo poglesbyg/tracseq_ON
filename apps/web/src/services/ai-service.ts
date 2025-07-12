@@ -1,5 +1,8 @@
 import { AIError } from '../errors/domain-errors'
-import type { AIAnalysisResult, GuideOptimizationResult } from '../lib/ai/ollama-service'
+import type {
+  AIAnalysisResult,
+  GuideOptimizationResult,
+} from '../lib/ai/ollama-service'
 import { aiService as ollamaService } from '../lib/ai/ollama-service'
 import type { GuideRNA } from '../lib/crispr/guide-design'
 
@@ -9,7 +12,7 @@ export class AIService {
    */
   async analyzeSequence(
     sequence: string,
-    context?: string
+    context?: string,
   ): Promise<AIAnalysisResult> {
     try {
       return await ollamaService.analyzeSequence(sequence, context)
@@ -17,7 +20,7 @@ export class AIService {
       throw new AIError(
         'Failed to analyze sequence with AI',
         'SEQUENCE_ANALYSIS_FAILED',
-        { sequence, context, originalError: error }
+        { sequence, context, originalError: error },
       )
     }
   }
@@ -27,24 +30,24 @@ export class AIService {
    */
   async optimizeGuide(
     guide: GuideRNA,
-    context?: string
+    context?: string,
   ): Promise<GuideOptimizationResult> {
     try {
       // Extract guide sequence and target info from GuideRNA
       const guideSequence = guide.sequence
       const targetSequence = '' // Will be provided by context if needed
       const pamSequence = guide.pamSequence || 'NGG'
-      
+
       return await ollamaService.optimizeGuideRNA(
         guideSequence,
         targetSequence,
-        pamSequence
+        pamSequence,
       )
     } catch (error) {
       throw new AIError(
         'Failed to optimize guide with AI',
         'GUIDE_OPTIMIZATION_FAILED',
-        { guide, context, originalError: error }
+        { guide, context, originalError: error },
       )
     }
   }
@@ -55,20 +58,20 @@ export class AIService {
   async getExperimentSuggestions(
     sequence: string,
     guides: GuideRNA[],
-    context?: string
+    context?: string,
   ): Promise<string[]> {
     try {
       const suggestions = await ollamaService.generateExperimentSuggestions(
         'crispr',
         context,
-        'human'
+        'human',
       )
       return suggestions.map((s: any) => s.title)
     } catch (error) {
       throw new AIError(
         'Failed to get experiment suggestions',
         'EXPERIMENT_SUGGESTIONS_FAILED',
-        { sequence, guides, context, originalError: error }
+        { sequence, guides, context, originalError: error },
       )
     }
   }
@@ -78,9 +81,9 @@ export class AIService {
    */
   async isAvailable(): Promise<boolean> {
     try {
-      return ollamaService.isAIAvailable()
+      return await Promise.resolve(ollamaService.isAIAvailable())
     } catch {
       return false
     }
   }
-} 
+}

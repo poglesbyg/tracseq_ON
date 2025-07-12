@@ -108,7 +108,9 @@ export function AnalysisView({
           {/* Guide Selection Panel for 3D */}
           <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-foreground">3D Guide Selection</CardTitle>
+              <CardTitle className="text-foreground">
+                3D Guide Selection
+              </CardTitle>
               <CardDescription className="text-muted-foreground">
                 Click on a guide to visualize it in 3D
               </CardDescription>
@@ -148,7 +150,9 @@ export function AnalysisView({
           {/* Molecular Analysis Stats */}
           <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-foreground">Molecular Analysis</CardTitle>
+              <CardTitle className="text-foreground">
+                Molecular Analysis
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -157,7 +161,9 @@ export function AnalysisView({
                   <span className="text-foreground">{sequence.length} bp</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Guides Found</span>
+                  <span className="text-muted-foreground">
+                    Total Guides Found
+                  </span>
                   <span className="text-foreground">{guides.length}</span>
                 </div>
                 <div className="flex justify-between">
@@ -175,7 +181,10 @@ export function AnalysisView({
                           Efficiency Score
                         </span>
                         <span className="text-foreground">
-                          {(selectedGuideFor3D.efficiencyScore * 100).toFixed(1)}%
+                          {(selectedGuideFor3D.efficiencyScore * 100).toFixed(
+                            1,
+                          )}
+                          %
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -183,11 +192,16 @@ export function AnalysisView({
                           Specificity Score
                         </span>
                         <span className="text-foreground">
-                          {(selectedGuideFor3D.specificityScore * 100).toFixed(1)}%
+                          {(selectedGuideFor3D.specificityScore * 100).toFixed(
+                            1,
+                          )}
+                          %
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">GC Content</span>
+                        <span className="text-muted-foreground">
+                          GC Content
+                        </span>
                         <span className="text-foreground">
                           {selectedGuideFor3D.gcContent.toFixed(1)}%
                         </span>
@@ -253,4 +267,4 @@ export function AnalysisView({
       )}
     </motion.div>
   )
-} 
+}

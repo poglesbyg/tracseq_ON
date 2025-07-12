@@ -12,10 +12,21 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc -b",
     "test": "turbo run test",
+    "test:e2e": "pnpm --filter @app/web test:e2e",
+    "test:e2e:ui": "pnpm --filter @app/web test:e2e:ui",
+    "test:e2e:debug": "pnpm --filter @app/web test:e2e:debug",
+    "test:e2e:report": "pnpm --filter @app/web test:e2e:report",
     "fix": "pnpm run fix:tsconfig && pnpm run fix:eslint && pnpm run fix:prettier",
     "fix:prettier": "prettier --write .",
     "fix:eslint": "eslint . --fix",
-    "fix:tsconfig": "monorepo-typescript-references fix"
+    "fix:tsconfig": "monorepo-typescript-references fix",
+    "dev-loop": "./scripts/dev-loop.sh",
+    "dev-loop:check": "./scripts/dev-loop.sh check",
+    "dev-loop:test": "./scripts/dev-loop.sh test",
+    "dev-loop:clean": "./scripts/dev-loop.sh clean",
+    "devlooper": "./scripts/devlooper-integration.sh",
+    "devlooper:setup": "./scripts/devlooper-integration.sh setup",
+    "devlooper:presets": "./scripts/devlooper-integration.sh presets"
   },
   "dependencies": {
     "@types/file-saver": "^2.0.7",

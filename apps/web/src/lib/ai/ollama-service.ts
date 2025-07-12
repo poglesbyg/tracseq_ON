@@ -43,7 +43,7 @@ class OllamaService {
   private async _initialize(): Promise<boolean> {
     try {
       console.log('🔍 Initializing Ollama service...')
-      
+
       // First, check if Ollama is accessible
       const healthCheck = await this._checkOllamaHealth()
       if (!healthCheck) {
@@ -58,10 +58,12 @@ class OllamaService {
       let availableModels: string[] = []
       try {
         const modelList = await ollama.list()
-        availableModels = modelList.models.map(m => m.name)
+        availableModels = modelList.models.map((m) => m.name)
         console.log('📋 Available models from API:', availableModels)
       } catch {
-        console.warn('⚠️ Could not get model list from API, trying direct model test')
+        console.warn(
+          '⚠️ Could not get model list from API, trying direct model test',
+        )
       }
 
       // If no models from API, try common model names directly
@@ -76,7 +78,7 @@ class OllamaService {
           'llama3',
           'llama2:latest',
           'llama2:7b',
-          'llama2'
+          'llama2',
         ]
       }
 
@@ -84,14 +86,14 @@ class OllamaService {
       for (const modelName of availableModels) {
         try {
           console.log(`🧪 Testing ${modelName}...`)
-          
+
           const testResponse = await ollama.generate({
             model: modelName,
             prompt: 'Hello',
             stream: false,
-            options: { 
+            options: {
               temperature: 0.1,
-              num_predict: 5 // Limit response length for testing
+              num_predict: 5, // Limit response length for testing
             },
           })
 
@@ -110,18 +112,19 @@ class OllamaService {
       // If we get here, no models worked
       console.warn('❌ No working models found via API')
       console.log('💡 Suggestions:')
-      console.log('   1. Update Ollama: "brew upgrade ollama" or download latest from ollama.ai')
+      console.log(
+        '   1. Update Ollama: "brew upgrade ollama" or download latest from ollama.ai',
+      )
       console.log('   2. Restart Ollama service')
       console.log('   3. Try: "ollama pull llama3.1:8b" to download a model')
       console.log('   4. Try: "ollama run llama3.1:8b" to start the model')
       console.log('   5. Check version mismatch - API may not be compatible')
-      
+
       // Since API isn't working, we'll use fallback mode but still report as "available"
       // for development purposes
       console.log('🔄 Enabling fallback mode with enhanced responses')
       this.isAvailable = false
       return false
-
     } catch (error) {
       console.error('❌ Ollama initialization failed:', error)
       this.isAvailable = false
@@ -135,14 +138,16 @@ class OllamaService {
       if (response.ok) {
         const data = await response.json()
         console.log(`🔧 Ollama version: ${data.version}`)
-        
+
         // Check for version mismatch
         const serverVersion = data.version
         if (serverVersion !== '0.9.6') {
-          console.warn(`⚠️ Version mismatch detected. Server: ${serverVersion}, Expected: 0.9.6`)
+          console.warn(
+            `⚠️ Version mismatch detected. Server: ${serverVersion}, Expected: 0.9.6`,
+          )
           console.log('💡 This may cause API compatibility issues')
         }
-        
+
         return true
       }
       return false

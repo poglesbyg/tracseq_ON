@@ -44,81 +44,73 @@
 
 :root {
   --radius: 0.625rem;
-  /* UNC Official Colors - Light Mode */
-  --unc-carolina-blue: #4b9cd3; /* Web Carolina Blue */
-  --unc-hyperlink-blue: #007fae; /* Hyperlink Blue */
-  --unc-navy: #13294b; /* Navy Blue equivalent */
-  --unc-white: #ffffff;
-  --unc-light-gray: #f8f9fa;
-  --unc-gray: #6c757d;
-  --unc-dark-gray: #495057;
-  --unc-very-dark-gray: #212529;
 
-  --background: var(--unc-white);
-  --foreground: var(--unc-very-dark-gray);
-  --card: var(--unc-white);
-  --card-foreground: var(--unc-very-dark-gray);
-  --popover: var(--unc-white);
-  --popover-foreground: var(--unc-very-dark-gray);
-  --primary: var(--unc-carolina-blue);
-  --primary-foreground: var(--unc-white);
-  --secondary: var(--unc-light-gray);
-  --secondary-foreground: var(--unc-very-dark-gray);
-  --muted: var(--unc-light-gray);
-  --muted-foreground: var(--unc-gray);
-  --accent: var(--unc-light-gray);
-  --accent-foreground: var(--unc-very-dark-gray);
-  --destructive: #dc3545;
-  --border: #ced4da;
-  --input: var(--unc-white);
-  --ring: var(--unc-carolina-blue);
-  --chart-1: var(--unc-carolina-blue);
-  --chart-2: var(--unc-hyperlink-blue);
-  --chart-3: var(--unc-navy);
-  --chart-4: #28a745;
-  --chart-5: #ffc107;
-  --sidebar: var(--unc-white);
-  --sidebar-foreground: var(--unc-very-dark-gray);
-  --sidebar-primary: var(--unc-carolina-blue);
-  --sidebar-primary-foreground: var(--unc-white);
-  --sidebar-accent: var(--unc-light-gray);
-  --sidebar-accent-foreground: var(--unc-very-dark-gray);
-  --sidebar-border: #ced4da;
-  --sidebar-ring: var(--unc-carolina-blue);
+  /* High contrast colors for better readability */
+  --background: #ffffff;
+  --foreground: #0f0f0f;
+  --card: #ffffff;
+  --card-foreground: #0f0f0f;
+  --popover: #ffffff;
+  --popover-foreground: #0f0f0f;
+  --primary: #0969da;
+  --primary-foreground: #ffffff;
+  --secondary: #f6f8fa;
+  --secondary-foreground: #24292f;
+  --muted: #f6f8fa;
+  --muted-foreground: #656d76;
+  --accent: #f6f8fa;
+  --accent-foreground: #24292f;
+  --destructive: #d1242f;
+  --border: #d1d9e0;
+  --input: #ffffff;
+  --ring: #0969da;
+  --chart-1: #0969da;
+  --chart-2: #1f883d;
+  --chart-3: #8250df;
+  --chart-4: #bf8700;
+  --chart-5: #d1242f;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #24292f;
+  --sidebar-primary: #0969da;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f6f8fa;
+  --sidebar-accent-foreground: #24292f;
+  --sidebar-border: #d1d9e0;
+  --sidebar-ring: #0969da;
 }
 
 .dark {
-  --background: oklch(0.13 0.028 261.692);
-  --foreground: oklch(0.985 0.002 247.839);
-  --card: oklch(0.21 0.034 264.665);
-  --card-foreground: oklch(0.985 0.002 247.839);
-  --popover: oklch(0.21 0.034 264.665);
-  --popover-foreground: oklch(0.985 0.002 247.839);
-  --primary: oklch(0.928 0.006 264.531);
-  --primary-foreground: oklch(0.21 0.034 264.665);
-  --secondary: oklch(0.278 0.033 256.848);
-  --secondary-foreground: oklch(0.985 0.002 247.839);
-  --muted: oklch(0.278 0.033 256.848);
-  --muted-foreground: oklch(0.707 0.022 261.325);
-  --accent: oklch(0.278 0.033 256.848);
-  --accent-foreground: oklch(0.985 0.002 247.839);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.21 0.034 264.665);
-  --sidebar-foreground: oklch(0.985 0.002 247.839);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0.002 247.839);
-  --sidebar-accent: oklch(0.278 0.033 256.848);
-  --sidebar-accent-foreground: oklch(0.985 0.002 247.839);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --background: #0d1117;
+  --foreground: #f0f6fc;
+  --card: #161b22;
+  --card-foreground: #f0f6fc;
+  --popover: #161b22;
+  --popover-foreground: #f0f6fc;
+  --primary: #58a6ff;
+  --primary-foreground: #0d1117;
+  --secondary: #21262d;
+  --secondary-foreground: #f0f6fc;
+  --muted: #21262d;
+  --muted-foreground: #8b949e;
+  --accent: #21262d;
+  --accent-foreground: #f0f6fc;
+  --destructive: #f85149;
+  --border: #30363d;
+  --input: #21262d;
+  --ring: #58a6ff;
+  --chart-1: #58a6ff;
+  --chart-2: #3fb950;
+  --chart-3: #a5a2ff;
+  --chart-4: #ffd700;
+  --chart-5: #f85149;
+  --sidebar: #161b22;
+  --sidebar-foreground: #f0f6fc;
+  --sidebar-primary: #58a6ff;
+  --sidebar-primary-foreground: #0d1117;
+  --sidebar-accent: #21262d;
+  --sidebar-accent-foreground: #f0f6fc;
+  --sidebar-border: #30363d;
+  --sidebar-ring: #58a6ff;
 }
 
 /* Tailwind V4 thinks that laptops don't have hover - this fixes it */
@@ -131,39 +123,112 @@
   body {
     @apply bg-background text-foreground;
   }
-  
+
   /* Ensure proper text contrast in input fields */
-  input, textarea, select {
-    @apply text-foreground bg-input;
-    color: var(--unc-very-dark-gray) !important;
-    background-color: var(--unc-white) !important;
+  input,
+  textarea,
+  select {
+    @apply text-foreground bg-input border-border;
+    color: #0f0f0f !important;
+    background-color: #ffffff !important;
+    border: 1px solid #d1d9e0 !important;
   }
-  
+
   /* Ensure proper text contrast in buttons and interactive elements */
   button {
     @apply text-foreground;
   }
-  
+
   /* Ensure proper text contrast in cards and containers */
-  .card, [data-card] {
-    @apply text-card-foreground;
-    color: var(--unc-very-dark-gray) !important;
+  .card,
+  [data-card] {
+    @apply text-card-foreground bg-card;
+    color: #0f0f0f !important;
+    background-color: #ffffff !important;
   }
-  
+
   /* Ensure proper text contrast in muted elements */
   .text-muted-foreground {
-    color: var(--unc-gray) !important;
+    color: #656d76 !important;
   }
-  
+
   /* Ensure proper text contrast in secondary elements */
   .text-secondary-foreground {
-    color: var(--unc-very-dark-gray) !important;
+    color: #24292f !important;
   }
-  
+
   /* Ensure proper placeholder text visibility */
-  input::placeholder, textarea::placeholder {
-    color: var(--unc-gray) !important;
-    opacity: 0.7;
+  input::placeholder,
+  textarea::placeholder {
+    color: #656d76 !important;
+    opacity: 0.8;
+  }
+
+  /* Ensure labels are visible */
+  label {
+    color: #24292f !important;
+    font-weight: 500;
+  }
+
+  /* Ensure proper text contrast in all text elements */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  span,
+  div {
+    color: inherit;
+  }
+
+  /* Ensure proper contrast for form elements */
+  .form-control,
+  .form-input,
+  .form-select {
+    color: #0f0f0f !important;
+    background-color: #ffffff !important;
+    border: 1px solid #d1d9e0 !important;
+  }
+
+  /* Ensure proper contrast for disabled elements */
+  input:disabled,
+  textarea:disabled,
+  select:disabled {
+    color: #656d76 !important;
+    background-color: #f6f8fa !important;
+  }
+
+  /* Dark mode text contrast */
+  .dark input,
+  .dark textarea,
+  .dark select {
+    color: #f0f6fc !important;
+    background-color: #21262d !important;
+    border: 1px solid #30363d !important;
+  }
+
+  .dark .card,
+  .dark [data-card] {
+    color: #f0f6fc !important;
+    background-color: #161b22 !important;
+  }
+
+  .dark label {
+    color: #f0f6fc !important;
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #8b949e !important;
+  }
+
+  .dark input:disabled,
+  .dark textarea:disabled,
+  .dark select:disabled {
+    color: #8b949e !important;
+    background-color: #21262d !important;
   }
 }
 

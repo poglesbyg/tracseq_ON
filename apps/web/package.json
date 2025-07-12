@@ -12,7 +12,11 @@
     "postinstall": "astro sync",
     "clean": "rm -rf .astro",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@app/api": "workspace:^",
@@ -86,6 +90,7 @@
     "@astrojs/node": "^9.2.1",
     "@astrojs/react": "^4.2.7",
     "@astrojs/vercel": "^8.1.5",
+    "@playwright/test": "^1.54.1",
     "@tailwindcss/vite": "^4.1.8",
     "@trpc/server": "^11.1.2",
     "@types/lodash-es": "^4.17.12",

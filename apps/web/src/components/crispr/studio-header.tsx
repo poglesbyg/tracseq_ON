@@ -44,4 +44,4 @@ export function StudioHeader({ onSettingsClick }: StudioHeaderProps) {
       </div>
     </motion.header>
   )
-} 
+}

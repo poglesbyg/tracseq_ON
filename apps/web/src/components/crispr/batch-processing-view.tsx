@@ -8,7 +8,9 @@ interface BatchProcessingViewProps {
   designParameters?: DesignParameters
 }
 
-export function BatchProcessingView({ designParameters }: BatchProcessingViewProps) {
+export function BatchProcessingView({
+  designParameters,
+}: BatchProcessingViewProps) {
   const defaultDesignParameters: DesignParameters = {
     targetSequence: '',
     pamType: 'NGG',
@@ -43,7 +45,9 @@ export function BatchProcessingView({ designParameters }: BatchProcessingViewPro
         </motion.p>
       </div>
 
-      <BatchAnalysis designParameters={designParameters || defaultDesignParameters} />
+      <BatchAnalysis
+        designParameters={designParameters || defaultDesignParameters}
+      />
     </motion.div>
   )
-} 
+}

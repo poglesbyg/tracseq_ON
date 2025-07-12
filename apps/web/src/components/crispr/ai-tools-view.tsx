@@ -162,7 +162,9 @@ export function AIToolsView({
               <div className="p-2 bg-primary/20 rounded-lg">
                 <Settings className="h-5 w-5 text-primary" />
               </div>
-              <h3 className="text-foreground font-semibold">Expert Assistant</h3>
+              <h3 className="text-foreground font-semibold">
+                Expert Assistant
+              </h3>
             </div>
             <p className="text-muted-foreground text-sm">
               Ask questions and get expert guidance through our AI chat
@@ -173,4 +175,4 @@ export function AIToolsView({
       </div>
     </motion.div>
   )
-} 
+}

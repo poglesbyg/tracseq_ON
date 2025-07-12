@@ -1,0 +1,123 @@
+{
+  "name": "TracSeq ON - CRISPR & Nanopore Analysis Platform",
+  "description": "Configuration for generating bioinformatics and CRISPR analysis code using devlooper",
+  "templates": {
+    "python": {
+      "test_framework": "pytest",
+      "dependencies": [
+        "numpy",
+        "pandas",
+        "biopython",
+        "scikit-learn",
+        "matplotlib",
+        "seaborn"
+      ]
+    },
+    "react": {
+      "test_framework": "jest",
+      "dependencies": [
+        "@testing-library/react",
+        "@testing-library/jest-dom",
+        "react",
+        "typescript"
+      ]
+    }
+  },
+  "prompts": {
+    "crispr_analysis": [
+      {
+        "name": "guide_rna_scorer",
+        "description": "CRISPR guide RNA scoring algorithm",
+        "prompt": "Create a Python class for CRISPR guide RNA scoring that:\n1. Calculates on-target efficiency scores using machine learning models\n2. Predicts off-target effects with risk assessment\n3. Evaluates PAM site accessibility and chromatin context\n4. Includes methods for batch processing multiple guide RNAs\n5. Provides confidence intervals for all predictions\n\nThe class should be well-tested with unit tests covering edge cases.",
+        "template": "python",
+        "output_path": "generated/crispr/guide_rna_scorer.py"
+      },
+      {
+        "name": "sequence_analyzer",
+        "description": "DNA sequence analysis for CRISPR applications",
+        "prompt": "Create a Python module for DNA sequence analysis that:\n1. Identifies optimal CRISPR cut sites in target sequences\n2. Calculates GC content and melting temperature\n3. Detects repetitive sequences and low-complexity regions\n4. Validates guide RNA sequences for length and composition\n5. Finds PAM sites for different CRISPR systems (Cas9, Cas12, etc.)\n6. Generates comprehensive sequence reports\n\nInclude comprehensive unit tests and example usage.",
+        "template": "python",
+        "output_path": "generated/crispr/sequence_analyzer.py"
+      },
+      {
+        "name": "off_target_predictor",
+        "description": "Off-target prediction for CRISPR guide RNAs",
+        "prompt": "Create a Python class for CRISPR off-target prediction that:\n1. Implements multiple scoring algorithms (CFD, MIT, etc.)\n2. Searches genome-wide for potential off-target sites\n3. Ranks off-targets by probability and severity\n4. Considers chromatin accessibility data when available\n5. Provides visualization of off-target landscapes\n6. Supports custom PAM sequences and mismatch tolerances\n\nInclude unit tests with mock genome data.",
+        "template": "python",
+        "output_path": "generated/crispr/off_target_predictor.py"
+      }
+    ],
+    "nanopore_analysis": [
+      {
+        "name": "fast5_processor",
+        "description": "Oxford Nanopore FAST5 file processor",
+        "prompt": "Create a Python class for processing Oxford Nanopore FAST5 files that:\n1. Reads and parses FAST5 files efficiently\n2. Extracts raw signal data and quality scores\n3. Performs basic signal analysis (mean, median, std)\n4. Converts to FASTQ format with quality filtering\n5. Generates sequencing run statistics and reports\n6. Handles batch processing of multiple files\n\nInclude unit tests with mock FAST5 data.",
+        "template": "python",
+        "output_path": "generated/nanopore/fast5_processor.py"
+      },
+      {
+        "name": "quality_analyzer",
+        "description": "Nanopore sequencing quality analysis",
+        "prompt": "Create a Python module for analyzing Oxford Nanopore sequencing quality that:\n1. Calculates read length distributions and N50 statistics\n2. Analyzes quality score distributions across reads\n3. Identifies and flags low-quality regions\n4. Generates quality plots and visualizations\n5. Compares quality metrics across different runs\n6. Provides recommendations for data filtering\n\nInclude comprehensive unit tests and plotting functionality.",
+        "template": "python",
+        "output_path": "generated/nanopore/quality_analyzer.py"
+      }
+    ],
+    "react_components": [
+      {
+        "name": "sequence_viewer",
+        "description": "DNA sequence visualization component",
+        "prompt": "Create a React component for DNA sequence visualization that:\n1. Displays DNA sequences with syntax highlighting\n2. Highlights PAM sites, cut sites, and guide RNA regions\n3. Shows GC content as a sliding window graph\n4. Provides zoom and pan functionality for long sequences\n5. Supports annotations and feature overlays\n6. Includes responsive design for mobile devices\n\nInclude comprehensive unit tests using React Testing Library.",
+        "template": "react",
+        "output_path": "generated/react/sequence_viewer.tsx"
+      },
+      {
+        "name": "results_table",
+        "description": "CRISPR analysis results table",
+        "prompt": "Create a React component for displaying CRISPR analysis results that:\n1. Shows guide RNA scores in a sortable, filterable table\n2. Includes columns for efficiency, specificity, and off-target counts\n3. Provides export functionality (CSV, JSON)\n4. Supports batch selection and actions\n5. Includes pagination for large result sets\n6. Shows detailed tooltips for score explanations\n\nInclude unit tests covering all interactive features.",
+        "template": "react",
+        "output_path": "generated/react/results_table.tsx"
+      },
+      {
+        "name": "file_upload",
+        "description": "Bioinformatics file upload component",
+        "prompt": "Create a React component for uploading bioinformatics files that:\n1. Supports drag-and-drop file upload\n2. Validates file formats (FASTA, FASTQ, FAST5, etc.)\n3. Shows upload progress and file size limits\n4. Provides file preview and validation feedback\n5. Handles batch file uploads\n6. Includes error handling and retry functionality\n\nInclude unit tests for file validation and upload scenarios.",
+        "template": "react",
+        "output_path": "generated/react/file_upload.tsx"
+      }
+    ],
+    "utilities": [
+      {
+        "name": "bioinformatics_utils",
+        "description": "General bioinformatics utility functions",
+        "prompt": "Create a Python module with bioinformatics utility functions that:\n1. Converts between different sequence formats (FASTA, FASTQ, etc.)\n2. Calculates common sequence statistics (GC content, length, etc.)\n3. Performs sequence transformations (reverse complement, translation)\n4. Validates sequence formats and content\n5. Handles degenerate nucleotides and ambiguous bases\n6. Provides sequence alignment utilities\n\nInclude comprehensive unit tests for all functions.",
+        "template": "python",
+        "output_path": "generated/utils/bioinformatics_utils.py"
+      },
+      {
+        "name": "data_validators",
+        "description": "Data validation utilities for bioinformatics",
+        "prompt": "Create a Python module for validating bioinformatics data that:\n1. Validates DNA/RNA sequences for valid characters\n2. Checks file formats and structure integrity\n3. Validates experimental parameters and ranges\n4. Performs quality control checks on sequencing data\n5. Provides detailed error messages and suggestions\n6. Supports custom validation rules\n\nInclude unit tests covering various validation scenarios.",
+        "template": "python",
+        "output_path": "generated/utils/data_validators.py"
+      }
+    ]
+  },
+  "workflows": [
+    {
+      "name": "crispr_pipeline",
+      "description": "Complete CRISPR analysis pipeline",
+      "steps": ["sequence_analyzer", "guide_rna_scorer", "off_target_predictor"]
+    },
+    {
+      "name": "nanopore_pipeline",
+      "description": "Complete Nanopore analysis pipeline",
+      "steps": ["fast5_processor", "quality_analyzer"]
+    },
+    {
+      "name": "ui_components",
+      "description": "Complete UI component set",
+      "steps": ["sequence_viewer", "results_table", "file_upload"]
+    }
+  ]
+}

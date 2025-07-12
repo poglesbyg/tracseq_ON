@@ -73,12 +73,10 @@ export function CrisprStudio() {
   return (
     <div className="min-h-screen bg-background">
       <StudioHeader onSettingsClick={handleSettingsClick} />
-      
+
       <StudioNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <main className="container mx-auto px-6 py-8">
-        {renderActiveTab()}
-      </main>
+      <main className="container mx-auto px-6 py-8">{renderActiveTab()}</main>
 
       {/* AI Chat Assistant - Always Available */}
       <AIChatAssistant

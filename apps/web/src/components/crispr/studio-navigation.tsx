@@ -9,7 +9,13 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
-export type StudioTab = 'dashboard' | 'design' | 'batch' | 'analysis' | 'ai' | 'results'
+export type StudioTab =
+  | 'dashboard'
+  | 'design'
+  | 'batch'
+  | 'analysis'
+  | 'ai'
+  | 'results'
 
 interface TabConfig {
   id: StudioTab
@@ -31,7 +37,10 @@ const tabConfigs: TabConfig[] = [
   { id: 'results', label: 'Results', icon: Settings },
 ]
 
-export function StudioNavigation({ activeTab, onTabChange }: StudioNavigationProps) {
+export function StudioNavigation({
+  activeTab,
+  onTabChange,
+}: StudioNavigationProps) {
   return (
     <motion.nav
       initial={{ opacity: 0 }}
@@ -62,4 +71,4 @@ export function StudioNavigation({ activeTab, onTabChange }: StudioNavigationPro
       </div>
     </motion.nav>
   )
-} 
+}

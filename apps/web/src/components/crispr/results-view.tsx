@@ -18,11 +18,12 @@ export function ResultsView() {
               Results Display Coming Soon
             </p>
             <p className="text-muted-foreground text-sm">
-              This section will contain comprehensive result analysis and export options
+              This section will contain comprehensive result analysis and export
+              options
             </p>
           </div>
         </CardContent>
       </Card>
     </motion.div>
   )
-} 
+}

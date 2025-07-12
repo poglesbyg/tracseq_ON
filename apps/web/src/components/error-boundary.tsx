@@ -1,10 +1,22 @@
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
 import { Component, type ReactNode, type ErrorInfo } from 'react'
 
-import { DomainError, CrisprError, ValidationError, AIError, RepositoryError } from '../errors/domain-errors'
+import {
+  DomainError,
+  CrisprError,
+  ValidationError,
+  AIError,
+  RepositoryError,
+} from '../errors/domain-errors'
 
 import { Button } from './ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from './ui/card'
 
 interface ErrorBoundaryState {
   hasError: boolean
@@ -18,7 +30,10 @@ interface ErrorBoundaryProps {
   onError?: (error: Error, errorInfo: ErrorInfo) => void
 }
 
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+export class ErrorBoundary extends Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
   constructor(props: ErrorBoundaryProps) {
     super(props)
     this.state = {
@@ -154,7 +169,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             </div>
             <CardTitle className="text-xl">Something went wrong</CardTitle>
             <CardDescription className="text-base">
-              An unexpected error occurred. Please try again or contact support if the problem persists.
+              An unexpected error occurred. Please try again or contact support
+              if the problem persists.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -255,8 +271,8 @@ export function useErrorHandler() {
   return (error: Error) => {
     // In a real application, you might want to report errors to a service
     console.error('Error caught by error handler:', error)
-    
+
     // Re-throw to trigger error boundary
     throw error
   }
-} 
+}

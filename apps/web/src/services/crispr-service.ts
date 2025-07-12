@@ -1,11 +1,13 @@
 import { CrisprError, ValidationError } from '../errors/domain-errors'
-import type { AIAnalysisResult, GuideOptimizationResult } from '../lib/ai/ollama-service'
+import type {
+  AIAnalysisResult,
+  GuideOptimizationResult,
+} from '../lib/ai/ollama-service'
 import type { GuideRNA, DesignParameters } from '../lib/crispr/guide-design'
 import type { CrisprRepository } from '../repositories/crispr-repository'
 
 import type { AIService } from './ai-service'
 import type { ValidationService } from './validation-service'
-
 
 export interface CrisprDesignRequest {
   sequence: string
@@ -32,7 +34,7 @@ export class CrisprService {
   constructor(
     private readonly crisprRepository: CrisprRepository,
     private readonly aiService: AIService,
-    private readonly validationService: ValidationService
+    private readonly validationService: ValidationService,
   ) {}
 
   /**
@@ -49,7 +51,7 @@ export class CrisprService {
       // Design guides using the repository
       const guides = await this.crisprRepository.designGuides(
         request.sequence,
-        request.parameters
+        request.parameters,
       )
 
       // Save design session if user context provided
@@ -60,30 +62,31 @@ export class CrisprService {
           sequence: request.sequence,
           parameters: request.parameters,
           guides,
-          createdAt: new Date()
+          createdAt: new Date(),
         })
       }
 
       return guides
     } catch (error) {
-      throw new CrisprError(
-        'Failed to design guide RNAs',
-        'DESIGN_FAILED',
-        { request, originalError: error }
-      )
+      throw new CrisprError('Failed to design guide RNAs', 'DESIGN_FAILED', {
+        request,
+        originalError: error,
+      })
     }
   }
 
   /**
    * Analyze guide RNAs with AI assistance
    */
-  async analyzeGuides(request: CrisprAnalysisRequest): Promise<AIAnalysisResult> {
+  async analyzeGuides(
+    request: CrisprAnalysisRequest,
+  ): Promise<AIAnalysisResult> {
     try {
       await this.validationService.validateAnalysisRequest(request)
 
       const analysisResult = await this.aiService.analyzeSequence(
         request.sequence,
-        request.context
+        request.context,
       )
 
       // Store analysis results
@@ -92,16 +95,15 @@ export class CrisprService {
         guides: request.guides,
         analysisType: request.analysisType,
         result: analysisResult,
-        timestamp: new Date()
+        timestamp: new Date(),
       })
 
       return analysisResult
     } catch (error) {
-      throw new CrisprError(
-        'Failed to analyze guides',
-        'ANALYSIS_FAILED',
-        { request, originalError: error }
-      )
+      throw new CrisprError('Failed to analyze guides', 'ANALYSIS_FAILED', {
+        request,
+        originalError: error,
+      })
     }
   }
 
@@ -110,28 +112,30 @@ export class CrisprService {
    */
   async optimizeGuide(
     guide: GuideRNA,
-    context?: string
+    context?: string,
   ): Promise<GuideOptimizationResult> {
     try {
-      await this.validationService.validateGuideRNA(guide)
+      this.validationService.validateGuideRNA(guide)
 
-      const optimizationResult = await this.aiService.optimizeGuide(guide, context)
+      const optimizationResult = await this.aiService.optimizeGuide(
+        guide,
+        context,
+      )
 
       // Log optimization for future reference
       await this.crisprRepository.saveOptimizationResult({
         originalGuide: guide,
         optimizedResult: optimizationResult,
         context,
-        timestamp: new Date()
+        timestamp: new Date(),
       })
 
       return optimizationResult
     } catch (error) {
-      throw new CrisprError(
-        'Failed to optimize guide',
-        'OPTIMIZATION_FAILED',
-        { guide, originalError: error }
-      )
+      throw new CrisprError('Failed to optimize guide', 'OPTIMIZATION_FAILED', {
+        guide,
+        originalError: error,
+      })
     }
   }
 
@@ -159,9 +163,9 @@ export class CrisprService {
         try {
           const guides = await this.crisprRepository.designGuides(
             sequence,
-            request.parameters
+            request.parameters,
           )
-          
+
           results.push({ sequence, guides })
           successful++
           totalGuides += guides.length
@@ -169,7 +173,7 @@ export class CrisprService {
           results.push({
             sequence,
             guides: [],
-            errors: [error instanceof Error ? error.message : 'Unknown error']
+            errors: [error instanceof Error ? error.message : 'Unknown error'],
           })
           failed++
         }
@@ -186,9 +190,9 @@ export class CrisprService {
             total: request.sequences.length,
             successful,
             failed,
-            totalGuides
+            totalGuides,
           },
-          createdAt: new Date()
+          createdAt: new Date(),
         })
       }
 
@@ -198,14 +202,14 @@ export class CrisprService {
           total: request.sequences.length,
           successful,
           failed,
-          totalGuides
-        }
+          totalGuides,
+        },
       }
     } catch (error) {
       throw new CrisprError(
         'Failed to process batch',
         'BATCH_PROCESSING_FAILED',
-        { request, originalError: error }
+        { request, originalError: error },
       )
     }
   }
@@ -220,7 +224,7 @@ export class CrisprService {
       throw new CrisprError(
         'Failed to retrieve design history',
         'HISTORY_RETRIEVAL_FAILED',
-        { userId, originalError: error }
+        { userId, originalError: error },
       )
     }
   }
@@ -236,7 +240,7 @@ export class CrisprService {
       throw new ValidationError(
         `Sequence too short. Minimum length: ${minLength}`,
         'SEQUENCE_TOO_SHORT',
-        { sequence, minLength }
+        { sequence, minLength },
       )
     }
 
@@ -244,7 +248,7 @@ export class CrisprService {
       throw new ValidationError(
         `Sequence too long. Maximum length: ${maxLength}`,
         'SEQUENCE_TOO_LONG',
-        { sequence, maxLength }
+        { sequence, maxLength },
       )
     }
 
@@ -254,8 +258,8 @@ export class CrisprService {
       throw new ValidationError(
         'Invalid DNA sequence. Only A, T, C, G characters allowed',
         'INVALID_DNA_SEQUENCE',
-        { sequence }
+        { sequence },
       )
     }
   }
-} 
+}

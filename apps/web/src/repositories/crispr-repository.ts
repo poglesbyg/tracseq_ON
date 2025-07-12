@@ -50,22 +50,28 @@ export interface BatchResult {
  */
 export interface ICrisprRepository {
   // Design operations
-  designGuides(sequence: string, parameters: DesignParameters): Promise<GuideRNA[]>
+  designGuides(
+    sequence: string,
+    parameters: DesignParameters,
+  ): Promise<GuideRNA[]>
   saveDesignSession(session: DesignSession): Promise<string>
   getDesignHistory(userId: string, limit?: number): Promise<DesignSession[]>
-  
+
   // Analysis operations
   saveAnalysisResult(result: AnalysisResult): Promise<string>
   getAnalysisHistory(userId: string, limit?: number): Promise<AnalysisResult[]>
-  
+
   // Optimization operations
   saveOptimizationResult(result: OptimizationResult): Promise<string>
-  getOptimizationHistory(userId: string, limit?: number): Promise<OptimizationResult[]>
-  
+  getOptimizationHistory(
+    userId: string,
+    limit?: number,
+  ): Promise<OptimizationResult[]>
+
   // Batch operations
   saveBatchResult(result: BatchResult): Promise<string>
   getBatchHistory(userId: string, limit?: number): Promise<BatchResult[]>
-  
+
   // Utility operations
   deleteDesignSession(id: string): Promise<void>
   deleteAnalysisResult(id: string): Promise<void>
@@ -84,21 +90,24 @@ export class CrisprRepository implements ICrisprRepository {
   /**
    * Design guide RNAs using the core algorithm
    */
-  async designGuides(sequence: string, parameters: DesignParameters): Promise<GuideRNA[]> {
+  async designGuides(
+    sequence: string,
+    parameters: DesignParameters,
+  ): Promise<GuideRNA[]> {
     try {
       // Use the existing guide design algorithm
       const designParams = {
         ...parameters,
-        targetSequence: sequence
+        targetSequence: sequence,
       }
-      
-      const guides = designGuideRNAs(designParams)
+
+      const guides = await Promise.resolve(designGuideRNAs(designParams))
       return guides
     } catch (error) {
       throw new RepositoryError(
         'Failed to design guides',
         'DESIGN_GUIDES_FAILED',
-        { sequence, parameters, originalError: error }
+        { sequence, parameters, originalError: error },
       )
     }
   }
@@ -106,17 +115,17 @@ export class CrisprRepository implements ICrisprRepository {
   /**
    * Save design session
    */
-  async saveDesignSession(session: DesignSession): Promise<string> {
+  saveDesignSession(session: DesignSession): Promise<string> {
     try {
       const id = session.id || this.generateId()
       const sessionWithId = { ...session, id }
       this.designSessions.set(id, sessionWithId)
-      return id
+      return Promise.resolve(id)
     } catch (error) {
       throw new RepositoryError(
         'Failed to save design session',
         'SAVE_DESIGN_SESSION_FAILED',
-        { session, originalError: error }
+        { session, originalError: error },
       )
     }
   }
@@ -124,19 +133,19 @@ export class CrisprRepository implements ICrisprRepository {
   /**
    * Get design history for a user
    */
-  async getDesignHistory(userId: string, limit = 10): Promise<DesignSession[]> {
+  getDesignHistory(userId: string, limit = 10): Promise<DesignSession[]> {
     try {
       const userSessions = Array.from(this.designSessions.values())
-        .filter(session => session.userId === userId)
+        .filter((session) => session.userId === userId)
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         .slice(0, limit)
-      
-      return userSessions
+
+      return Promise.resolve(userSessions)
     } catch (error) {
       throw new RepositoryError(
         'Failed to get design history',
         'GET_DESIGN_HISTORY_FAILED',
-        { userId, limit, originalError: error }
+        { userId, limit, originalError: error },
       )
     }
   }
@@ -144,17 +153,17 @@ export class CrisprRepository implements ICrisprRepository {
   /**
    * Save analysis result
    */
-  async saveAnalysisResult(result: AnalysisResult): Promise<string> {
+  saveAnalysisResult(result: AnalysisResult): Promise<string> {
     try {
       const id = result.id || this.generateId()
       const resultWithId = { ...result, id }
       this.analysisResults.set(id, resultWithId)
-      return id
+      return Promise.resolve(id)
     } catch (error) {
       throw new RepositoryError(
         'Failed to save analysis result',
         'SAVE_ANALYSIS_RESULT_FAILED',
-        { result, originalError: error }
+        { result, originalError: error },
       )
     }
   }
@@ -162,19 +171,19 @@ export class CrisprRepository implements ICrisprRepository {
   /**
    * Get analysis history (mock implementation)
    */
-  async getAnalysisHistory(userId: string, limit = 10): Promise<AnalysisResult[]> {
+  getAnalysisHistory(userId: string, limit = 10): Promise<AnalysisResult[]> {
     try {
       // In a real implementation, this would filter by userId
       const results = Array.from(this.analysisResults.values())
         .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
         .slice(0, limit)
-      
-      return results
+
+      return Promise.resolve(results)
     } catch (error) {
       throw new RepositoryError(
         'Failed to get analysis history',
         'GET_ANALYSIS_HISTORY_FAILED',
-        { userId, limit, originalError: error }
+        { userId, limit, originalError: error },
       )
     }
   }
@@ -182,17 +191,17 @@ export class CrisprRepository implements ICrisprRepository {
   /**
    * Save optimization result
    */
-  async saveOptimizationResult(result: OptimizationResult): Promise<string> {
+  saveOptimizationResult(result: OptimizationResult): Promise<string> {
     try {
       const id = result.id || this.generateId()
       const resultWithId = { ...result, id }
       this.optimizationResults.set(id, resultWithId)
-      return id
+      return Promise.resolve(id)
     } catch (error) {
       throw new RepositoryError(
         'Failed to save optimization result',
         'SAVE_OPTIMIZATION_RESULT_FAILED',
-        { result, originalError: error }
+        { result, originalError: error },
       )
     }
   }
@@ -200,19 +209,22 @@ export class CrisprRepository implements ICrisprRepository {
   /**
    * Get optimization history (mock implementation)
    */
-  async getOptimizationHistory(userId: string, limit = 10): Promise<OptimizationResult[]> {
+  getOptimizationHistory(
+    userId: string,
+    limit = 10,
+  ): Promise<OptimizationResult[]> {
     try {
       // In a real implementation, this would filter by userId
       const results = Array.from(this.optimizationResults.values())
         .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
         .slice(0, limit)
-      
-      return results
+
+      return Promise.resolve(results)
     } catch (error) {
       throw new RepositoryError(
         'Failed to get optimization history',
         'GET_OPTIMIZATION_HISTORY_FAILED',
-        { userId, limit, originalError: error }
+        { userId, limit, originalError: error },
       )
     }
   }
@@ -220,17 +232,17 @@ export class CrisprRepository implements ICrisprRepository {
   /**
    * Save batch result
    */
-  async saveBatchResult(result: BatchResult): Promise<string> {
+  saveBatchResult(result: BatchResult): Promise<string> {
     try {
       const id = result.id || this.generateId()
       const resultWithId = { ...result, id }
       this.batchResults.set(id, resultWithId)
-      return id
+      return Promise.resolve(id)
     } catch (error) {
       throw new RepositoryError(
         'Failed to save batch result',
         'SAVE_BATCH_RESULT_FAILED',
-        { result, originalError: error }
+        { result, originalError: error },
       )
     }
   }
@@ -238,19 +250,19 @@ export class CrisprRepository implements ICrisprRepository {
   /**
    * Get batch history for a user
    */
-  async getBatchHistory(userId: string, limit = 10): Promise<BatchResult[]> {
+  getBatchHistory(userId: string, limit = 10): Promise<BatchResult[]> {
     try {
       const userBatches = Array.from(this.batchResults.values())
-        .filter(batch => batch.userId === userId)
+        .filter((batch) => batch.userId === userId)
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         .slice(0, limit)
-      
-      return userBatches
+
+      return Promise.resolve(userBatches)
     } catch (error) {
       throw new RepositoryError(
         'Failed to get batch history',
         'GET_BATCH_HISTORY_FAILED',
-        { userId, limit, originalError: error }
+        { userId, limit, originalError: error },
       )
     }
   }
@@ -258,22 +270,23 @@ export class CrisprRepository implements ICrisprRepository {
   /**
    * Delete design session
    */
-  async deleteDesignSession(id: string): Promise<void> {
+  deleteDesignSession(id: string): Promise<void> {
     try {
       if (!this.designSessions.has(id)) {
         throw new RepositoryError(
           'Design session not found',
           'DESIGN_SESSION_NOT_FOUND',
-          { id }
+          { id },
         )
       }
-      
+
       this.designSessions.delete(id)
+      return Promise.resolve()
     } catch (error) {
       throw new RepositoryError(
         'Failed to delete design session',
         'DELETE_DESIGN_SESSION_FAILED',
-        { id, originalError: error }
+        { id, originalError: error },
       )
     }
   }
@@ -281,22 +294,23 @@ export class CrisprRepository implements ICrisprRepository {
   /**
    * Delete analysis result
    */
-  async deleteAnalysisResult(id: string): Promise<void> {
+  deleteAnalysisResult(id: string): Promise<void> {
     try {
       if (!this.analysisResults.has(id)) {
         throw new RepositoryError(
           'Analysis result not found',
           'ANALYSIS_RESULT_NOT_FOUND',
-          { id }
+          { id },
         )
       }
-      
+
       this.analysisResults.delete(id)
+      return Promise.resolve()
     } catch (error) {
       throw new RepositoryError(
         'Failed to delete analysis result',
         'DELETE_ANALYSIS_RESULT_FAILED',
-        { id, originalError: error }
+        { id, originalError: error },
       )
     }
   }
@@ -311,27 +325,28 @@ export class CrisprRepository implements ICrisprRepository {
   /**
    * Get repository statistics (utility method)
    */
-  async getStatistics(): Promise<{
+  getStatistics(): Promise<{
     totalDesignSessions: number
     totalAnalysisResults: number
     totalOptimizationResults: number
     totalBatchResults: number
   }> {
-    return {
+    return Promise.resolve({
       totalDesignSessions: this.designSessions.size,
       totalAnalysisResults: this.analysisResults.size,
       totalOptimizationResults: this.optimizationResults.size,
       totalBatchResults: this.batchResults.size,
-    }
+    })
   }
 
   /**
    * Clear all data (for testing purposes)
    */
-  async clearAll(): Promise<void> {
+  clearAll(): Promise<void> {
     this.designSessions.clear()
     this.analysisResults.clear()
     this.optimizationResults.clear()
     this.batchResults.clear()
+    return Promise.resolve()
   }
-} 
+}

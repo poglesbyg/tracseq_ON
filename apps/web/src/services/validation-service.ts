@@ -1,46 +1,45 @@
 import { ValidationError } from '../errors/domain-errors'
 import type { GuideRNA, DesignParameters } from '../lib/crispr/guide-design'
 
-import type { 
-  CrisprDesignRequest, 
-  CrisprAnalysisRequest, 
-  BatchProcessingRequest 
+import type {
+  CrisprDesignRequest,
+  CrisprAnalysisRequest,
+  BatchProcessingRequest,
 } from './crispr-service'
 
 export class ValidationService {
   /**
    * Validate CRISPR design request
    */
-  async validateDesignRequest(request: CrisprDesignRequest): Promise<void> {
+  validateDesignRequest(request: CrisprDesignRequest): Promise<void> {
     if (!request.sequence) {
-      throw new ValidationError(
-        'Sequence is required',
-        'MISSING_SEQUENCE',
-        { request }
-      )
+      throw new ValidationError('Sequence is required', 'MISSING_SEQUENCE', {
+        request,
+      })
     }
 
     if (!request.parameters) {
       throw new ValidationError(
         'Design parameters are required',
         'MISSING_PARAMETERS',
-        { request }
+        { request },
       )
     }
 
     this.validateSequence(request.sequence)
     this.validateDesignParameters(request.parameters)
+    return Promise.resolve()
   }
 
   /**
    * Validate CRISPR analysis request
    */
-  async validateAnalysisRequest(request: CrisprAnalysisRequest): Promise<void> {
+  validateAnalysisRequest(request: CrisprAnalysisRequest): Promise<void> {
     if (!request.sequence) {
       throw new ValidationError(
         'Sequence is required for analysis',
         'MISSING_SEQUENCE',
-        { request }
+        { request },
       )
     }
 
@@ -48,7 +47,7 @@ export class ValidationService {
       throw new ValidationError(
         'At least one guide RNA is required for analysis',
         'MISSING_GUIDES',
-        { request }
+        { request },
       )
     }
 
@@ -56,7 +55,7 @@ export class ValidationService {
       throw new ValidationError(
         'Analysis type is required',
         'MISSING_ANALYSIS_TYPE',
-        { request }
+        { request },
       )
     }
 
@@ -65,26 +64,27 @@ export class ValidationService {
       throw new ValidationError(
         'Invalid analysis type',
         'INVALID_ANALYSIS_TYPE',
-        { request, validTypes: validAnalysisTypes }
+        { request, validTypes: validAnalysisTypes },
       )
     }
 
     this.validateSequence(request.sequence)
-    
+
     for (const guide of request.guides) {
       this.validateGuideRNA(guide)
     }
+    return Promise.resolve()
   }
 
   /**
    * Validate batch processing request
    */
-  async validateBatchRequest(request: BatchProcessingRequest): Promise<void> {
+  validateBatchRequest(request: BatchProcessingRequest): Promise<void> {
     if (!request.sequences || request.sequences.length === 0) {
       throw new ValidationError(
         'At least one sequence is required for batch processing',
         'MISSING_SEQUENCES',
-        { request }
+        { request },
       )
     }
 
@@ -92,7 +92,7 @@ export class ValidationService {
       throw new ValidationError(
         'Batch size too large. Maximum 100 sequences allowed',
         'BATCH_SIZE_TOO_LARGE',
-        { request, maxSize: 100 }
+        { request, maxSize: 100 },
       )
     }
 
@@ -100,7 +100,7 @@ export class ValidationService {
       throw new ValidationError(
         'Design parameters are required for batch processing',
         'MISSING_PARAMETERS',
-        { request }
+        { request },
       )
     }
 
@@ -114,10 +114,11 @@ export class ValidationService {
         throw new ValidationError(
           `Invalid sequence at position ${i + 1}`,
           'INVALID_BATCH_SEQUENCE',
-          { request, sequenceIndex: i, originalError: error }
+          { request, sequenceIndex: i, originalError: error },
         )
       }
     }
+    return Promise.resolve()
   }
 
   /**
@@ -128,7 +129,7 @@ export class ValidationService {
       throw new ValidationError(
         'Guide RNA sequence is required',
         'MISSING_GUIDE_SEQUENCE',
-        { guide }
+        { guide },
       )
     }
 
@@ -136,7 +137,7 @@ export class ValidationService {
       throw new ValidationError(
         'Guide RNA sequence must be exactly 20 nucleotides',
         'INVALID_GUIDE_LENGTH',
-        { guide, expectedLength: 20 }
+        { guide, expectedLength: 20 },
       )
     }
 
@@ -146,7 +147,7 @@ export class ValidationService {
       throw new ValidationError(
         'Guide RNA sequence contains invalid characters. Only A, T, C, G allowed',
         'INVALID_GUIDE_SEQUENCE',
-        { guide }
+        { guide },
       )
     }
 
@@ -154,27 +155,31 @@ export class ValidationService {
       throw new ValidationError(
         'PAM sequence is required',
         'MISSING_PAM_SEQUENCE',
-        { guide }
+        { guide },
       )
     }
 
-    if (typeof guide.efficiencyScore !== 'number' || 
-        guide.efficiencyScore < 0 || 
-        guide.efficiencyScore > 1) {
+    if (
+      typeof guide.efficiencyScore !== 'number' ||
+      guide.efficiencyScore < 0 ||
+      guide.efficiencyScore > 1
+    ) {
       throw new ValidationError(
         'Efficiency score must be a number between 0 and 1',
         'INVALID_EFFICIENCY_SCORE',
-        { guide }
+        { guide },
       )
     }
 
-    if (typeof guide.specificityScore !== 'number' || 
-        guide.specificityScore < 0 || 
-        guide.specificityScore > 1) {
+    if (
+      typeof guide.specificityScore !== 'number' ||
+      guide.specificityScore < 0 ||
+      guide.specificityScore > 1
+    ) {
       throw new ValidationError(
         'Specificity score must be a number between 0 and 1',
         'INVALID_SPECIFICITY_SCORE',
-        { guide }
+        { guide },
       )
     }
   }
@@ -187,7 +192,7 @@ export class ValidationService {
       throw new ValidationError(
         'Sequence must be a non-empty string',
         'INVALID_SEQUENCE_TYPE',
-        { sequence }
+        { sequence },
       )
     }
 
@@ -195,7 +200,7 @@ export class ValidationService {
       throw new ValidationError(
         'Sequence too short. Minimum length: 20 nucleotides',
         'SEQUENCE_TOO_SHORT',
-        { sequence, minLength: 20 }
+        { sequence, minLength: 20 },
       )
     }
 
@@ -203,7 +208,7 @@ export class ValidationService {
       throw new ValidationError(
         'Sequence too long. Maximum length: 50,000 nucleotides',
         'SEQUENCE_TOO_LONG',
-        { sequence, maxLength: 50000 }
+        { sequence, maxLength: 50000 },
       )
     }
 
@@ -213,7 +218,7 @@ export class ValidationService {
       throw new ValidationError(
         'Invalid DNA sequence. Only A, T, C, G, N characters allowed',
         'INVALID_DNA_SEQUENCE',
-        { sequence }
+        { sequence },
       )
     }
 
@@ -224,7 +229,7 @@ export class ValidationService {
       throw new ValidationError(
         'Sequence contains too many ambiguous bases (N). Maximum 10% allowed',
         'EXCESSIVE_AMBIGUOUS_BASES',
-        { sequence, nPercentage }
+        { sequence, nPercentage },
       )
     }
   }
@@ -237,46 +242,47 @@ export class ValidationService {
       throw new ValidationError(
         'Target sequence is required in design parameters',
         'MISSING_TARGET_SEQUENCE',
-        { parameters }
+        { parameters },
       )
     }
 
     this.validateSequence(parameters.targetSequence)
 
     if (!parameters.pamType) {
-      throw new ValidationError(
-        'PAM type is required',
-        'MISSING_PAM_TYPE',
-        { parameters }
-      )
+      throw new ValidationError('PAM type is required', 'MISSING_PAM_TYPE', {
+        parameters,
+      })
     }
 
     const validPamTypes = ['NGG', 'NRG', 'NNGRRT']
     if (!validPamTypes.includes(parameters.pamType)) {
-      throw new ValidationError(
-        'Invalid PAM type',
-        'INVALID_PAM_TYPE',
-        { parameters, validTypes: validPamTypes }
-      )
+      throw new ValidationError('Invalid PAM type', 'INVALID_PAM_TYPE', {
+        parameters,
+        validTypes: validPamTypes,
+      })
     }
 
-    if (typeof parameters.minEfficiencyScore !== 'number' || 
-        parameters.minEfficiencyScore < 0 || 
-        parameters.minEfficiencyScore > 1) {
+    if (
+      typeof parameters.minEfficiencyScore !== 'number' ||
+      parameters.minEfficiencyScore < 0 ||
+      parameters.minEfficiencyScore > 1
+    ) {
       throw new ValidationError(
         'Minimum efficiency score must be a number between 0 and 1',
         'INVALID_MIN_EFFICIENCY_SCORE',
-        { parameters }
+        { parameters },
       )
     }
 
-    if (typeof parameters.maxOffTargets !== 'number' || 
-        parameters.maxOffTargets < 0 || 
-        parameters.maxOffTargets > 10000) {
+    if (
+      typeof parameters.maxOffTargets !== 'number' ||
+      parameters.maxOffTargets < 0 ||
+      parameters.maxOffTargets > 10000
+    ) {
       throw new ValidationError(
         'Maximum off-targets must be a number between 0 and 10,000',
         'INVALID_MAX_OFF_TARGETS',
-        { parameters }
+        { parameters },
       )
     }
 
@@ -284,7 +290,7 @@ export class ValidationService {
       throw new ValidationError(
         'Allow non-canonical PAMs must be a boolean',
         'INVALID_ALLOW_NON_CANONICAL_PAMS',
-        { parameters }
+        { parameters },
       )
     }
   }
@@ -297,7 +303,7 @@ export class ValidationService {
       throw new ValidationError(
         'User ID must be a non-empty string',
         'INVALID_USER_ID',
-        { userId }
+        { userId },
       )
     }
 
@@ -305,7 +311,7 @@ export class ValidationService {
       throw new ValidationError(
         'User ID must be between 3 and 50 characters',
         'INVALID_USER_ID_LENGTH',
-        { userId }
+        { userId },
       )
     }
 
@@ -315,7 +321,7 @@ export class ValidationService {
       throw new ValidationError(
         'User ID contains invalid characters. Only letters, numbers, hyphens, and underscores allowed',
         'INVALID_USER_ID_FORMAT',
-        { userId }
+        { userId },
       )
     }
   }
@@ -328,7 +334,7 @@ export class ValidationService {
       throw new ValidationError(
         'Project ID must be a non-empty string',
         'INVALID_PROJECT_ID',
-        { projectId }
+        { projectId },
       )
     }
 
@@ -336,7 +342,7 @@ export class ValidationService {
       throw new ValidationError(
         'Project ID must be between 3 and 50 characters',
         'INVALID_PROJECT_ID_LENGTH',
-        { projectId }
+        { projectId },
       )
     }
 
@@ -346,8 +352,8 @@ export class ValidationService {
       throw new ValidationError(
         'Project ID contains invalid characters. Only letters, numbers, hyphens, and underscores allowed',
         'INVALID_PROJECT_ID_FORMAT',
-        { projectId }
+        { projectId },
       )
     }
   }
-} 
+}

@@ -4,7 +4,6 @@ import { AIService } from './ai-service'
 import { CrisprService } from './crispr-service'
 import { ValidationService } from './validation-service'
 
-
 /**
  * Service container for dependency injection
  * Manages service instances and their dependencies
@@ -40,7 +39,7 @@ export class ServiceContainer {
     const crisprService = new CrisprService(
       crisprRepository,
       aiService,
-      validationService
+      validationService,
     )
 
     // Register services
@@ -132,5 +131,7 @@ export const serviceContainer = ServiceContainer.getInstance()
 // Export convenient service getters
 export const getCrisprService = () => serviceContainer.getCrisprService()
 export const getAIService = () => serviceContainer.getAIService()
-export const getValidationService = () => serviceContainer.getValidationService()
-export const getCrisprRepository = () => serviceContainer.getCrisprRepository() 
+export function getValidationService() {
+  return serviceContainer.getValidationService()
+}
+export const getCrisprRepository = () => serviceContainer.getCrisprRepository()
