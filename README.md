@@ -1,99 +1,305 @@
-# Monorepo Scaffold
+# TracSeq ON - AI-Driven Laboratory Management Platform
 
-This is a scaffold for a modern web application using a monorepo architecture. It's designed to provide a solid foundation for new projects, with a focus on type-safety, developer experience, and scalability.
+**TracSeq ON** is a comprehensive AI-powered laboratory information management system (LIMS) specialized for CRISPR gene editing and Oxford Nanopore sequencing workflows. Built with modern web technologies and integrated with Ollama AI, it provides intelligent analysis, automated form processing, and comprehensive experiment tracking.
 
-## What's inside?
+## 🧬 Core Features
 
-This monorepo includes:
+### **CRISPR Design Studio**
+- **AI-Powered Guide RNA Design**: Intelligent sequence analysis with GC content optimization and efficiency scoring
+- **Off-Target Analysis**: Comprehensive prediction and risk assessment for guide RNA safety
+- **Batch Processing**: High-throughput analysis of multiple sequences simultaneously
+- **3D Molecular Visualization**: Interactive molecular viewer for guide RNA structures
+- **AI Chat Assistant**: Natural language interface for CRISPR methodology questions
 
-- `apps/web`: An [Astro](https://astro.build/) application for the frontend.
-- `packages/api`: A [tRPC](https://trpc.io/) API for type-safe client-server communication.
-- `packages/db`: Database schemas, migrations, and query utilities using [Kysely](https://kysely.dev/).
-- `packages/utils`: Shared utilities used across the monorepo.
-- **Authentication**: Example implementation using [better-auth](https://github.com/BetterAuth/better-auth) with GitHub as an OAuth provider.
-- **UI**: Basic UI setup with [Tailwind CSS](https://tailwindcss.com/) and [shadcn/ui](https://ui.shadcn.com/).
-- **Tooling**:
-  - [Turborepo](https://turbo.build/repo) for high-performance builds.
-  - [PNPM](https://pnpm.io/) for efficient package management.
-  - [TypeScript](https://www.typescriptlang.org/) for static typing.
-  - [ESLint](https://eslint.org/) and [Prettier](https://prettier.io/) for code quality.
+### **Nanopore Sample Tracking**
+- **Intelligent PDF Processing**: AI-powered extraction from submission forms with 50+ regex patterns
+- **Sample Management**: Complete tracking from submission to completion
+- **Flow Cell Optimization**: Automated recommendations for MinION/GridION/PromethION
+- **Quality Control**: Automated validation and quality assessment
+- **Bioinformatics Pipeline**: Integrated analysis workflow management
 
-## Perfect for AI-Assisted Development
+### **AI Integration**
+- **Ollama LLM Integration**: Local AI models for sequence analysis and optimization
+- **Fallback Systems**: Algorithmic analysis when AI is unavailable
+- **RAG System**: Vector embeddings for enhanced document understanding
+- **Confidence Scoring**: Quality assessment for all AI-generated results
 
-This scaffold is specifically designed to excel with AI coding assistants and "vibe coding" workflows:
+## 🏗️ Architecture
 
-- **Rich Examples**: The codebase provides comprehensive examples of common patterns like API routing, database connections, migrations, authentication flows, and UI components that AI can learn from and replicate.
-- **Comprehensive Cursor Rules**: Pre-configured `.cursor/rules/` directory with detailed guidelines for:
-  - Database patterns and Kysely type helpers
-  - tRPC and React Query integration patterns
-  - React component conventions and shadcn/ui usage
-  - TypeScript best practices and naming conventions
-  - Environment variable management
-  - Code organization and project structure
-- **Consistent Patterns**: Standardized approaches across the entire stack make it easy for AI to understand and extend the codebase following established conventions.
-- **Type Safety**: Full TypeScript coverage provides clear contracts and interfaces that AI can work with confidently.
+### **Frontend (Astro + React)**
+- **Modern UI**: Built with Tailwind CSS and shadcn/ui components
+- **Server-Side Rendering**: Astro for optimal performance
+- **Interactive Components**: React for dynamic user interfaces
+- **Real-Time Updates**: Smart polling for live data synchronization
 
-Whether you're pair programming with Claude, GitHub Copilot, or Cursor's AI, this scaffold gives your AI assistant the context and examples it needs to generate high-quality, consistent code that follows your project's patterns.
+### **Backend (tRPC + Kysely)**
+- **Type-Safe API**: End-to-end type safety with tRPC
+- **Database Layer**: Kysely query builder with PostgreSQL
+- **Authentication**: Better-auth with GitHub OAuth
+- **Microservices**: Modular architecture for scalability
 
-## Getting Started
+### **Database (PostgreSQL)**
+- **CRISPR Schema**: Experiments, sequences, guide RNAs, off-target sites
+- **Nanopore Schema**: Sample tracking, processing steps, quality metrics
+- **User Management**: Lab-specific roles and permissions
+- **Analysis Results**: Flexible JSONB storage for computational results
 
-1.  **Clone the repository:**
+### **AI Services**
+- **Ollama Integration**: Local LLM deployment for privacy
+- **PDF Processing**: Intelligent document parsing and extraction
+- **Sequence Analysis**: AI-powered DNA/RNA analysis
+- **Guide Optimization**: Machine learning-enhanced design recommendations
 
-    ```bash
-    git clone https://github.com/your-repo/monorepo-scaffold.git
-    cd monorepo-scaffold
-    ```
+## 🚀 Quick Start
 
-2.  **Install dependencies:**
+### **Prerequisites**
+- Node.js 18+ and PNPM
+- Docker and Docker Compose
+- Ollama (optional, for AI features)
 
-    ```bash
-    pnpm install
-    ```
+### **1. Clone and Install**
+```bash
+git clone https://github.com/your-org/tracseq-on.git
+cd tracseq-on
+pnpm install
+```
 
-3.  **Set up environment variables:**
+### **2. Start Database**
+```bash
+# Start PostgreSQL with Docker
+docker-compose up -d postgres
 
-    Create a `.env` file in `apps/web` and add the following variables:
+# Run database migrations
+DATABASE_URL="postgresql://crispr_user:crispr_password@localhost:5432/crispr_db" pnpm --filter @app/db db:migrate
 
-    ```env
-    # Generate a secret with `openssl rand -base64 32`
-    AUTH_SECRET="your_auth_secret"
+# Seed with sample data
+DATABASE_URL="postgresql://crispr_user:crispr_password@localhost:5432/crispr_db" pnpm --filter @app/db db:seed
+```
 
-    # From your GitHub OAuth application
-    GITHUB_CLIENT_ID="your_github_client_id"
-    GITHUB_CLIENT_SECRET="your_github_client_secret"
+### **3. Configure Environment**
+Create `.env` in `apps/web/`:
+```env
+# Database
+DATABASE_URL="postgresql://crispr_user:crispr_password@localhost:5432/crispr_db"
 
-    # Your local PostgreSQL connection string
-    DATABASE_URL="postgres://user:password@localhost:5432/monorepo-scaffold"
-    ```
+# Authentication
+AUTH_SECRET="your-secret-key-here"
+GITHUB_CLIENT_ID="your-github-client-id"
+GITHUB_CLIENT_SECRET="your-github-client-secret"
 
-4.  **Set up the database:**
+# AI Services (optional)
+OLLAMA_HOST="http://localhost:11434"
+```
 
-    Make sure you have a PostgreSQL server running. Then, run the migrations:
+### **4. Start Development Server**
+```bash
+pnpm dev
+```
 
-    ```bash
-    DATABASE_URL="postgres://user:password@localhost:5432/monorepo-scaffold" pnpm --filter @app/db db:migrate
-    ```
+**Access the application:**
+- **Main App**: http://localhost:3005
+- **CRISPR Studio**: http://localhost:3005/crispr
+- **Nanopore Tracking**: http://localhost:3005/nanopore
+- **Database Admin**: http://localhost:5050 (pgAdmin)
 
-5.  **Run the development server:**
+## 🤖 AI Setup (Optional)
 
-    ```bash
-    pnpm dev
-    ```
+### **Install Ollama**
+```bash
+# macOS
+brew install ollama
 
-    The web application will be available at `http://localhost:3001`.
+# Linux
+curl -fsSL https://ollama.ai/install.sh | sh
 
-## Development
+# Windows - Download from https://ollama.ai
+```
 
-- `pnpm build`: Build all apps and packages.
-- `pnpm lint`: Lint all code.
-- `pnpm typecheck`: Run TypeScript to check for type errors.
-- `pnpm test`: Run tests.
+### **Download AI Models**
+```bash
+# Start Ollama service
+ollama serve
 
-# Authors
+# Download recommended models
+ollama pull llama3.1        # General purpose
+ollama pull llama3.1:8b     # Faster responses
+ollama pull llama3.1:70b    # Highest quality
+```
 
-- [@ocavue](https://github.com/ocavue)
-- [@maccman](https://github.com/maccman)
+### **Test AI Integration**
+```bash
+# Test model availability
+ollama run llama3.1 "What is CRISPR gene editing?"
+```
 
-# License
+## 📊 System Components
+
+### **Applications**
+- **`apps/web`**: Main Astro application with React components
+- **`packages/api`**: tRPC API layer with domain-specific procedures
+- **`packages/db`**: Database schemas, migrations, and utilities
+- **`packages/utils`**: Shared utilities and helpers
+
+### **Key Features by Domain**
+
+#### **CRISPR Design (`/crispr`)**
+- Guide RNA design with efficiency scoring
+- Off-target analysis and risk assessment
+- Batch processing for multiple sequences
+- AI-powered optimization recommendations
+- 3D molecular visualization
+- Export capabilities (PDF, CSV, FASTA)
+
+#### **Nanopore Tracking (`/nanopore`)**
+- Sample submission and tracking
+- PDF form processing with AI extraction
+- Quality control and validation
+- Flow cell management and optimization
+- Bioinformatics pipeline integration
+- Progress tracking and notifications
+
+#### **AI Services**
+- Local LLM integration with Ollama
+- Intelligent sequence analysis
+- PDF document processing
+- Natural language chat interface
+- Fallback algorithmic analysis
+- Confidence scoring and validation
+
+## 🔧 Development
+
+### **Available Scripts**
+```bash
+# Development
+pnpm dev              # Start development server
+pnpm build            # Build all packages
+pnpm preview          # Preview production build
+
+# Code Quality
+pnpm lint             # Run ESLint
+pnpm typecheck        # TypeScript checking
+pnpm test             # Run tests
+pnpm fix              # Auto-fix formatting and linting
+
+# Database
+pnpm --filter @app/db db:migrate     # Run migrations
+pnpm --filter @app/db db:seed        # Seed database
+pnpm --filter @app/db db:reset       # Reset database
+```
+
+### **Database Management**
+```bash
+# Create new migration
+DATABASE_URL="postgresql://crispr_user:crispr_password@localhost:5432/crispr_db" pnpm --filter @app/db db:migrate:create <name>
+
+# Run migrations
+DATABASE_URL="postgresql://crispr_user:crispr_password@localhost:5432/crispr_db" pnpm --filter @app/db db:migrate
+
+# Seed with sample data
+DATABASE_URL="postgresql://crispr_user:crispr_password@localhost:5432/crispr_db" pnpm --filter @app/db db:seed
+```
+
+## 🏭 Production Deployment
+
+### **Docker Deployment**
+```bash
+# Build production images
+docker-compose -f docker-compose.prod.yml build
+
+# Deploy with production settings
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### **Environment Variables**
+```env
+# Production Database
+DATABASE_URL="postgresql://user:password@host:5432/tracseq_production"
+
+# Authentication
+AUTH_SECRET="secure-production-secret"
+GITHUB_CLIENT_ID="production-github-app-id"
+GITHUB_CLIENT_SECRET="production-github-app-secret"
+
+# AI Services
+OLLAMA_HOST="https://your-ollama-instance.com"
+
+# Performance
+NODE_ENV="production"
+LOG_LEVEL="info"
+```
+
+## 🧪 Testing
+
+### **AI Features Demo**
+Visit `/crispr` and try:
+1. **Sequence Analysis**: Enter DNA sequence for AI analysis
+2. **Guide Design**: Generate and optimize guide RNAs
+3. **Chat Assistant**: Ask questions about CRISPR methodology
+4. **PDF Processing**: Upload Nanopore submission forms
+
+### **Sample Data**
+The system includes realistic sample data:
+- 6 CRISPR experiments with different organisms
+- 15 Nanopore samples with various statuses
+- Guide RNA designs with efficiency scores
+- Off-target analysis results
+
+## 📚 Documentation
+
+### **API Documentation**
+- **tRPC Endpoints**: Auto-generated type-safe API
+- **Database Schema**: Comprehensive migration files
+- **AI Services**: Ollama integration patterns
+
+### **Developer Guidelines**
+- **Code Conventions**: TypeScript best practices
+- **Database Patterns**: Kysely type helpers
+- **Component Architecture**: React + Astro patterns
+- **AI Integration**: LLM service patterns
+
+## 🔐 Security
+
+### **Data Protection**
+- **Local AI Processing**: No data sent to external AI services
+- **User Authentication**: GitHub OAuth with session management
+- **Database Security**: Parameterized queries and validation
+- **Input Sanitization**: Comprehensive validation schemas
+
+### **Privacy Features**
+- **On-Premises AI**: Ollama runs locally for data privacy
+- **Secure Sessions**: Better-auth with secure cookie handling
+- **Access Control**: Lab-specific permissions and roles
+- **Audit Logging**: Comprehensive activity tracking
+
+## 🤝 Contributing
+
+### **Development Setup**
+1. Fork the repository
+2. Create a feature branch
+3. Follow the coding conventions
+4. Add tests for new features
+5. Submit a pull request
+
+### **Code Style**
+- **TypeScript**: Strict type checking
+- **ESLint**: Configured with best practices
+- **Prettier**: Consistent code formatting
+- **Commit Messages**: Conventional commits
+
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **Ollama**: Local LLM infrastructure
+- **shadcn/ui**: Beautiful UI components
+- **tRPC**: Type-safe API development
+- **Kysely**: Type-safe SQL query builder
+- **Astro**: Modern web framework
+
+---
+
+**TracSeq ON** - Empowering laboratory research with AI-driven analysis and comprehensive experiment management.
+
+*Context improved by Giga AI*
