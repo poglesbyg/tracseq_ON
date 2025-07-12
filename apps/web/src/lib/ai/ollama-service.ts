@@ -28,74 +28,126 @@ class OllamaService {
   private model = 'llama3.1:latest' // Default model, can be configured
   private isAvailable = false
   private workingModel: string | null = null
+  private initializationPromise: Promise<boolean> | null = null
 
-  async initialize() {
+  async initialize(): Promise<boolean> {
+    // Prevent multiple simultaneous initializations
+    if (this.initializationPromise) {
+      return await this.initializationPromise
+    }
+
+    this.initializationPromise = this._initialize()
+    return await this.initializationPromise
+  }
+
+  private async _initialize(): Promise<boolean> {
     try {
-      // Check if Ollama is running and model is available
-      const models = await ollama.list()
-      this.isAvailable = models.models.some(
-        (m) =>
-          m.name === this.model || m.name.includes(this.model.split(':')[0]),
-      )
+      console.log('🔍 Initializing Ollama service...')
+      
+      // First, check if Ollama is accessible
+      const healthCheck = await this._checkOllamaHealth()
+      if (!healthCheck) {
+        console.warn('❌ Ollama service not accessible')
+        this.isAvailable = false
+        return false
+      }
 
-      if (!this.isAvailable) {
-        // Try different model names that might work
-        const modelVariants = [
+      console.log('✅ Ollama service accessible')
+
+      // Try to get the list of models
+      let availableModels: string[] = []
+      try {
+        const modelList = await ollama.list()
+        availableModels = modelList.models.map(m => m.name)
+        console.log('📋 Available models from API:', availableModels)
+      } catch {
+        console.warn('⚠️ Could not get model list from API, trying direct model test')
+      }
+
+      // If no models from API, try common model names directly
+      if (availableModels.length === 0) {
+        console.log('🔍 Testing common model names directly...')
+        availableModels = [
           'llama3.1:latest',
           'llama3.1:8b',
           'llama3.1',
           'llama3:latest',
           'llama3:8b',
           'llama3',
+          'llama2:latest',
+          'llama2:7b',
+          'llama2'
         ]
-
-        console.log('🔍 Testing model variants...')
-
-        for (const modelName of modelVariants) {
-          try {
-            console.log(`Testing ${modelName}...`)
-            const testResponse = await ollama.generate({
-              model: modelName,
-              prompt: 'Test',
-              stream: false,
-              options: { temperature: 0.1 },
-            })
-
-            if (testResponse.response) {
-              this.workingModel = modelName
-              this.model = modelName
-              this.isAvailable = true
-              console.log(
-                `✅ Ollama AI service initialized with model: ${modelName} (found working model)`,
-              )
-              return true
-            }
-          } catch {
-            console.log(`❌ ${modelName} failed`)
-          }
-        }
-
-        console.warn(
-          `Ollama models not accessible. AI features will use advanced fallback responses.`,
-        )
-        console.log(
-          'Available models via API:',
-          models.models.map((m) => m.name),
-        )
-        console.log(
-          '💡 Tip: Try running "ollama run llama3.1" in terminal to ensure model is loaded',
-        )
-      } else {
-        this.workingModel = this.model
-        console.log(
-          `✅ Ollama AI service initialized with model: ${this.model}`,
-        )
       }
 
-      return this.isAvailable
-    } catch (error) {
-      console.warn('Ollama not available:', error)
+      // Test each model to find a working one
+      for (const modelName of availableModels) {
+        try {
+          console.log(`🧪 Testing ${modelName}...`)
+          
+          const testResponse = await ollama.generate({
+            model: modelName,
+            prompt: 'Hello',
+            stream: false,
+            options: { 
+              temperature: 0.1,
+              num_predict: 5 // Limit response length for testing
+            },
+          })
+
+          if (testResponse.response && testResponse.response.length > 0) {
+            this.workingModel = modelName
+            this.model = modelName
+            this.isAvailable = true
+            console.log(`✅ Ollama initialized with model: ${modelName}`)
+            return true
+          }
+        } catch (_error) {
+          console.log(`❌ ${modelName} failed`)
+        }
+      }
+
+      // If we get here, no models worked
+      console.warn('❌ No working models found via API')
+      console.log('💡 Suggestions:')
+      console.log('   1. Update Ollama: "brew upgrade ollama" or download latest from ollama.ai')
+      console.log('   2. Restart Ollama service')
+      console.log('   3. Try: "ollama pull llama3.1:8b" to download a model')
+      console.log('   4. Try: "ollama run llama3.1:8b" to start the model')
+      console.log('   5. Check version mismatch - API may not be compatible')
+      
+      // Since API isn't working, we'll use fallback mode but still report as "available"
+      // for development purposes
+      console.log('🔄 Enabling fallback mode with enhanced responses')
       this.isAvailable = false
+      return false
+
+    } catch (error) {
+      console.error('❌ Ollama initialization failed:', error)
+      this.isAvailable = false
+      return false
+    }
+  }
+
+  private async _checkOllamaHealth(): Promise<boolean> {
+    try {
+      const response = await fetch('http://localhost:11434/api/version')
+      if (response.ok) {
+        const data = await response.json()
+        console.log(`🔧 Ollama version: ${data.version}`)
+        
+        // Check for version mismatch
+        const serverVersion = data.version
+        if (serverVersion !== '0.9.6') {
+          console.warn(`⚠️ Version mismatch detected. Server: ${serverVersion}, Expected: 0.9.6`)
+          console.log('💡 This may cause API compatibility issues')
+        }
+        
+        return true
+      }
+      return false
+    } catch (error) {
+      console.warn('Ollama health check failed:', error)
       return false
     }
   }
@@ -104,6 +156,11 @@ class OllamaService {
     sequence: string,
     context?: string,
   ): Promise<AIAnalysisResult> {
+    // Ensure initialization
+    if (!this.isAvailable) {
+      await this.initialize()
+    }
+
     if (!this.isAvailable) {
       return this.getFallbackSequenceAnalysis(sequence)
     }
@@ -147,6 +204,11 @@ Respond in JSON format with: analysis, suggestions (array), confidence (0-1), re
     targetSequence: string,
     pamSequence: string,
   ): Promise<GuideOptimizationResult> {
+    // Ensure initialization
+    if (!this.isAvailable) {
+      await this.initialize()
+    }
+
     if (!this.isAvailable) {
       return this.getFallbackGuideOptimization(guideSequence)
     }
@@ -192,6 +254,11 @@ Respond in JSON format with: optimizedSequence, improvements (array), riskAssess
     targetGene?: string,
     organism?: string,
   ): Promise<ExperimentSuggestion[]> {
+    // Ensure initialization
+    if (!this.isAvailable) {
+      await this.initialize()
+    }
+
     if (!this.isAvailable) {
       return this.getFallbackExperimentSuggestions(experimentType)
     }
@@ -232,6 +299,11 @@ Respond in JSON format as an array of objects with: title, description, rational
   }
 
   async answerQuestion(question: string, context?: any): Promise<string> {
+    // Ensure initialization
+    if (!this.isAvailable) {
+      await this.initialize()
+    }
+
     if (!this.isAvailable) {
       return this.getFallbackAnswer(question)
     }

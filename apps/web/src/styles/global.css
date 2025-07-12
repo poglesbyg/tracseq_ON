@@ -52,24 +52,25 @@
   --unc-light-gray: #f8f9fa;
   --unc-gray: #6c757d;
   --unc-dark-gray: #495057;
+  --unc-very-dark-gray: #212529;
 
   --background: var(--unc-white);
-  --foreground: var(--unc-dark-gray);
+  --foreground: var(--unc-very-dark-gray);
   --card: var(--unc-white);
-  --card-foreground: var(--unc-dark-gray);
+  --card-foreground: var(--unc-very-dark-gray);
   --popover: var(--unc-white);
-  --popover-foreground: var(--unc-dark-gray);
+  --popover-foreground: var(--unc-very-dark-gray);
   --primary: var(--unc-carolina-blue);
   --primary-foreground: var(--unc-white);
   --secondary: var(--unc-light-gray);
-  --secondary-foreground: var(--unc-dark-gray);
+  --secondary-foreground: var(--unc-very-dark-gray);
   --muted: var(--unc-light-gray);
   --muted-foreground: var(--unc-gray);
   --accent: var(--unc-light-gray);
-  --accent-foreground: var(--unc-dark-gray);
+  --accent-foreground: var(--unc-very-dark-gray);
   --destructive: #dc3545;
-  --border: #dee2e6;
-  --input: #dee2e6;
+  --border: #ced4da;
+  --input: var(--unc-white);
   --ring: var(--unc-carolina-blue);
   --chart-1: var(--unc-carolina-blue);
   --chart-2: var(--unc-hyperlink-blue);
@@ -77,12 +78,12 @@
   --chart-4: #28a745;
   --chart-5: #ffc107;
   --sidebar: var(--unc-white);
-  --sidebar-foreground: var(--unc-dark-gray);
+  --sidebar-foreground: var(--unc-very-dark-gray);
   --sidebar-primary: var(--unc-carolina-blue);
   --sidebar-primary-foreground: var(--unc-white);
   --sidebar-accent: var(--unc-light-gray);
-  --sidebar-accent-foreground: var(--unc-dark-gray);
-  --sidebar-border: #dee2e6;
+  --sidebar-accent-foreground: var(--unc-very-dark-gray);
+  --sidebar-border: #ced4da;
   --sidebar-ring: var(--unc-carolina-blue);
 }
 
@@ -129,6 +130,40 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  
+  /* Ensure proper text contrast in input fields */
+  input, textarea, select {
+    @apply text-foreground bg-input;
+    color: var(--unc-very-dark-gray) !important;
+    background-color: var(--unc-white) !important;
+  }
+  
+  /* Ensure proper text contrast in buttons and interactive elements */
+  button {
+    @apply text-foreground;
+  }
+  
+  /* Ensure proper text contrast in cards and containers */
+  .card, [data-card] {
+    @apply text-card-foreground;
+    color: var(--unc-very-dark-gray) !important;
+  }
+  
+  /* Ensure proper text contrast in muted elements */
+  .text-muted-foreground {
+    color: var(--unc-gray) !important;
+  }
+  
+  /* Ensure proper text contrast in secondary elements */
+  .text-secondary-foreground {
+    color: var(--unc-very-dark-gray) !important;
+  }
+  
+  /* Ensure proper placeholder text visibility */
+  input::placeholder, textarea::placeholder {
+    color: var(--unc-gray) !important;
+    opacity: 0.7;
   }
 }
 
