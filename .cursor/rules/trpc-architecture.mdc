@@ -1,38 +1,66 @@
 ---
-description: Defines the type-safe API architecture and communication patterns for CRISPR experiment management
-globs: **/experiments/**/*.ts,**/api/**/*.ts,**/trpc/**/*.ts
+description: Specifies the type-safe API architecture and procedure definitions for LIMS system integrations using tRPC
+globs: packages/api/**/*.ts,apps/web/src/client/trpc.ts,apps/web/src/pages/api/trpc/*.ts
 alwaysApply: false
 ---
 
 
 # trpc-architecture
 
-## Core API Structure
+The tRPC implementation provides type-safe communication between the frontend and backend services with domain-specific procedures:
 
-The tRPC architecture implements experiment management workflows through type-safe procedures:
+## Core Router Configuration
 
-### Experiments Router
-Handles CRISPR experiment lifecycle with specialized endpoints for:
-- Experiment creation with metadata and ownership tracking
-- Status transitions (draft → analyzing → completed → archived)
-- Nested resource management for sequences and guide RNAs
-- Off-target analysis result storage
+### Experiment Management Router (`packages/api/src/routers/experiments.ts`)
+- Custom procedures for CRISPR guide sequence validation
+- Batch analysis workflow coordination 
+- Experiment metadata validation and enrichment
+- Integration with AI analysis pipeline
 
-### Data Validation Layer
-Domain-specific validation rules enforced through Zod schemas:
-- DNA sequence pattern validation (ATCGN)
-- Score range constraints (0-1) for efficiency metrics
-- UUID relationship validation between experiments and components
+### User Context Router (`packages/api/src/routers/user.ts`) 
+- Lab-specific authorization rules
+- Experiment ownership and access control
+- Research group management
 
-### API Workflow Integration
-- Sequence submission workflow with experiment context
-- Guide RNA design persistence pipeline
-- Off-target analysis results storage in JSONB format
+## Middleware Components
 
-Importance Score: 85 - Critical for maintaining data integrity and experiment workflow management
+### API Context (`packages/api/src/context.ts`)
+- Lab session validation
+- Equipment access verification
+- Sample tracking integration
 
-Relevant Files:
-- `DATABASE_INTEGRATION.md`
+### Domain-Specific Procedures
+
+Located in `packages/api/src/actions/`:
+
+**Experiments:**
+- Guide RNA design validation
+- Off-target analysis coordination
+- Batch processing state management
+- AI analysis result handling
+
+**Users:**
+- Lab access level verification
+- Equipment certification checks
+- Research protocol compliance
+
+## Integration Points
+
+### Client Configuration (`apps/web/src/client/trpc.ts`)
+- AI service connection management
+- Real-time analysis updates
+- Batch operation coordination
+
+### API Endpoint (`apps/web/src/pages/api/trpc/[trpc].ts`)
+- CRISPR workflow orchestration
+- Analysis pipeline routing
+- Result transformation handlers
+
+Importance Scores:
+- Experiment Management Router: 95 (Core CRISPR analysis workflows)
+- Domain-Specific Procedures: 90 (Critical business validation)
+- Lab Context Middleware: 85 (Research integrity enforcement)
+- Integration Points: 75 (Workflow coordination)
 
 $END$
 

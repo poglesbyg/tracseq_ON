@@ -1,63 +1,57 @@
 ---
-description: Defines database schema and data models for CRISPR experiment management and analysis
-globs: *.md,src/db/**/*,src/models/**/*,prisma/**/*
+description: Schema and data model documentation for LIMS system focusing on user authentication and domain-specific models
+globs: packages/db/**/*.ts,packages/api/src/actions/**/*.ts
 alwaysApply: false
 ---
 
 
 # data-models
 
-### Core Domain Tables
+## Core Domain Models
 
-The database schema implements specialized tables for CRISPR experiment management:
+### Experiment Schema
+- Location: `packages/db/src/types.ts`
+- Domain-specific fields for CRISPR experiments:
+  - Guide RNA sequences
+  - Target DNA sequences
+  - Off-target analysis results
+  - Efficiency scores
+  - Batch processing metadata
 
-1. `experiments`
-- Tracks CRISPR design projects
-- Status workflow: draft → analyzing → completed → archived 
-- Associates experiments with user ownership
-- Importance: 95
+### User Authentication Model
+- Location: `packages/db/src/types.gen.ts`
+- Lab-specific user roles and permissions
+- Access control for sensitive genetic data
+- Experiment ownership tracking
 
-2. `sequences`
-- Stores validated DNA sequences
-- Enforces ATCGN pattern validation
-- Records genomic coordinates and strand information
-- Importance: 90
+### Data Relationships
+- Location: `packages/api/src/actions/experiments`
 
-3. `guide_rnas`
-- Captures designed guide RNA data
-- Stores PAM sites and scoring metrics
-- Tracks algorithm metadata and versions
-- Importance: 85
+Key associations:
+- Experiments to Users (many-to-one)
+- Guide RNAs to Experiments (many-to-one)
+- Analysis Results to Experiments (one-to-many)
 
-4. `off_target_sites`
-- Records predicted off-target binding locations
-- Mismatch analysis and position tracking
-- Risk scoring for each site
-- Importance: 80
+## Domain-Specific Fields
 
-5. `analysis_results`
-- Flexible JSONB storage for computational results
-- Algorithm parameters and metrics
-- Experiment association
-- Importance: 75
+### Guide RNA Records
+- Sequence validation rules
+- PAM site requirements
+- GC content constraints
+- Efficiency scoring metrics
+- Off-target binding predictions
 
-### Data Validation Rules
+### Analysis Results
+- Cutting frequency determinations
+- MIT specificity scores
+- Risk assessment categories
+- Gene context annotations
 
-Domain-specific validation includes:
-- DNA sequence pattern matching against ATCGN
-- Score range validation (0-1)
-- UUID relationship validation
-- Experiment status transitions
-
-### Domain Relationships
-
-- Experiments contain multiple sequences
-- Guide RNAs associate with specific sequences
-- Off-target sites link to guide RNAs
-- Analysis results connect to experiments
-
-File paths:
-- `DATABASE_INTEGRATION.md`
+Importance Scores:
+- Core Schema Design: 95 (Critical domain models)
+- Authentication Model: 85 (Lab-specific security)
+- Data Relationships: 80 (Experiment tracking)
+- Field Validations: 75 (Domain rules)
 
 $END$
 

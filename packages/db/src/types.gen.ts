@@ -169,6 +169,98 @@ export interface GuideRna {
   targetPosition: number;
 }
 
+export interface NanoporeAttachment {
+  createdAt: Generated<Timestamp>;
+  description: string | null;
+  fileName: string;
+  filePath: string | null;
+  fileSizeBytes: Int8 | null;
+  fileType: string | null;
+  id: Generated<string>;
+  sampleId: string;
+  uploadedAt: Generated<Timestamp>;
+  uploadedBy: string | null;
+}
+
+export interface NanoporeProcessingStep {
+  assignedTo: string | null;
+  completedAt: Timestamp | null;
+  createdAt: Generated<Timestamp>;
+  estimatedDurationHours: number | null;
+  id: Generated<string>;
+  notes: string | null;
+  /**
+   * Flexible JSONB storage for step-specific results and metrics
+   */
+  resultsData: Json | null;
+  sampleId: string;
+  startedAt: Timestamp | null;
+  stepName: string;
+  stepStatus: Generated<string | null>;
+  updatedAt: Generated<Timestamp>;
+}
+
+export interface NanoporeSampleDetail {
+  /**
+   * Whether bioinformatics analysis is requested
+   */
+  analysisRequired: Generated<boolean | null>;
+  analysisType: string | null;
+  barcodeKit: string | null;
+  barcodingRequired: Generated<boolean | null>;
+  basecallingModel: string | null;
+  createdAt: Generated<Timestamp>;
+  dataDeliveryMethod: string | null;
+  expectedReadLength: string | null;
+  fileFormat: string | null;
+  genomeSize: string | null;
+  id: Generated<string>;
+  internalNotes: string | null;
+  libraryPrepKit: string | null;
+  organism: string | null;
+  qcNotes: string | null;
+  qcPassed: boolean | null;
+  runTimeHours: number | null;
+  sampleId: string;
+  specialInstructions: string | null;
+  updatedAt: Generated<Timestamp>;
+}
+
+export interface NanoporeSample {
+  /**
+   * Staff member currently responsible for the sample
+   */
+  assignedTo: string | null;
+  completedAt: Timestamp | null;
+  concentration: Numeric | null;
+  createdAt: Generated<Timestamp>;
+  createdBy: string;
+  flowCellCount: Generated<number | null>;
+  flowCellType: string | null;
+  id: Generated<string>;
+  labName: string | null;
+  libraryPrepBy: string | null;
+  /**
+   * Processing priority level
+   */
+  priority: Generated<string | null>;
+  projectId: string | null;
+  sampleBuffer: string | null;
+  sampleName: string;
+  sampleType: string;
+  startedAt: Timestamp | null;
+  /**
+   * Current processing status of the sample
+   */
+  status: Generated<string | null>;
+  submittedAt: Generated<Timestamp>;
+  submitterEmail: string;
+  submitterName: string;
+  totalAmount: Numeric | null;
+  updatedAt: Generated<Timestamp>;
+  volume: Numeric | null;
+}
+
 export interface OffTargetSite {
   annotation: string | null;
   bindingScore: Numeric | null;
@@ -309,6 +401,10 @@ export interface DB {
   credentials: Credential;
   experiments: Experiment;
   guideRnas: GuideRna;
+  nanoporeAttachments: NanoporeAttachment;
+  nanoporeProcessingSteps: NanoporeProcessingStep;
+  nanoporeSampleDetails: NanoporeSampleDetail;
+  nanoporeSamples: NanoporeSample;
   offTargetSites: OffTargetSite;
   sequences: Sequence;
   sessions: Session;

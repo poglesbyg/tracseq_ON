@@ -10,42 +10,48 @@
 - Explain your OBSERVATIONS clearly, then provide REASONING to identify the exact issue. Add console logs when needed to gather more information.
 
 
-The system implements a CRISPR experiment management platform with the following core components:
+The LIMS Microservice System implements an AI-driven laboratory management platform specialized for CRISPR gene editing and analysis. The system is organized into three core business domains:
 
-## Database Structure (Importance: 95)
-Central data model organized around experiments and genetic sequences:
-- Experiments table tracking CRISPR design projects with status workflows
-- Sequences table for DNA validation and genomic coordinates
-- Guide RNAs table for storing designed CRISPR guides with efficiency metrics
-- Off-target sites table for binding prediction and risk assessment
-- Analysis results using JSONB format for flexible computational data storage
+1. AI-Driven Analysis Platform
+- Sequence Analysis Engine (/lims-ai/src/sequence_analysis.py)
+  - DNA sequence evaluation
+  - GC content optimization
+  - Risk factor assessment
+  
+- Guide RNA Optimization System (/lims-ai/src/guide_optimization.py)
+  - Secondary structure prediction
+  - Off-target risk evaluation
+  - Sequence modification suggestions
 
-## Domain Workflows (Importance: 90)
-Integrated experiment management process:
-1. Experiment creation and status tracking (draft → analyzing → completed → archived)
-2. DNA sequence validation against ATCGN patterns
-3. Guide RNA design with PAM site identification
-4. Off-target binding analysis with risk scoring
-5. Results storage with algorithm versioning
+2. CRISPR Design & Analysis
+- Guide RNA Design Engine (/lims-core/src/validation.rs)
+  - Pattern validation for DNA sequences
+  - Score range validation
+  - Domain-specific rules enforcement
 
-## Data Validation Layer (Importance: 85)
-Domain-specific validation rules:
-- DNA sequence pattern validation (ATCGN)
-- Score range enforcement (0-1)
-- Relationship integrity via UUID validation
-- Experiment status transitions
-- Guide RNA efficiency metrics
+- Experiment Management (/lims-ai/src/experiment_suggestions.py)
+  - Protocol optimizations
+  - Risk mitigation strategies
+  - Literature-based recommendations
 
-## Integration Points (Importance: 80)
-Business logic connectivity:
-- Experiment-to-sequence relationships
-- Guide RNA persistence pipeline
-- Off-target analysis storage workflow
-- Results aggregation in JSONB format
+3. Laboratory Integration Layer
+- Data Transformation Pipeline (/lims-ai/src/data_transformation.py)
+  - Bioinformatics workflow processing
+  - Guide RNA scoring
+  - Off-target site analysis
 
-Critical Files:
-- `DATABASE_INTEGRATION.md`
-- `apps/web/src/components/ExperimentsDashboardDemo.tsx`
+- Fallback Systems (/lims-ai/src/fallback_system.py)
+  - Algorithmic analysis backup
+  - Graceful AI degradation
+  - Rule-based recommendations
+
+Core Business Components:
+- CRISPR Studio (/apps/web/src/components/crispr/crispr-studio.tsx)
+- Guide RNA Design System (/src/lib/crispr/guide-design.ts)
+- Off-Target Analysis Engine (/src/lib/crispr/off-target-prediction.ts)
+- Batch Processing System (/src/lib/crispr/batch-processing.ts)
+
+The system integrates these components through a microservices architecture, with each service handling specific aspects of the CRISPR analysis and laboratory management workflow.
 
 $END$
 

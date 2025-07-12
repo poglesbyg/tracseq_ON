@@ -1,40 +1,57 @@
 ---
-description: Specialized algorithms and logic for CRISPR guide RNA design and analysis
-globs: '**/algorithms/*.ts','**/crispr/*.ts','**/guide-rna/*.ts','**/analysis/*.ts'
+description: Specification for CRISPR guide RNA design algorithms, scoring mechanisms and optimization logic
+globs: **/guide-design.ts,**/crispr/*.ts,**/sequence_analysis.py,**/guide_optimization.py
 alwaysApply: false
 ---
 
 
 # crispr-algorithms
 
-Based on the provided specification, the CRISPR algorithm documentation appears to be primarily focused around:
+## Core Guide RNA Design Logic
+- `/lims-ai/src/guide_optimization.py`
+- `/src/lib/crispr/guide-design.ts`
 
-## Algorithm Components
-- GC content calculation for guide RNA sequences
-- PAM (Protospacer Adjacent Motif) site identification 
-- Guide RNA scoring mechanisms
-- Off-target filtering logic
+Key algorithms for guide RNA sequence optimization:
+- GC content calculation with 40-60% optimal range validation
+- PAM site identification for SpCas9, SpCas9-NG, and Cas12a systems
+- Position-weighted scoring matrix for guide efficiency
+- Nucleotide composition rules for optimal guide design
 
-## Integration Points
-The algorithms interface with the `guide_rnas` and `off_target_sites` tables for:
-- Storing designed guide RNAs with PAM sites
-- Recording efficiency scores
-- Tracking specificity metrics
-- Maintaining on-target scoring
-- Capturing algorithm metadata and versioning
+**Importance Score: 95** - Critical core business logic for CRISPR functionality
 
-## Analysis Storage
-Results from the CRISPR algorithms are persisted in the `analysis_results` table using:
-- JSONB format for flexibility
-- Algorithm parameters storage
-- Performance metrics tracking
+## Sequence Analysis Engine 
+- `/lims-ai/src/sequence_analysis.py`
 
-## Score Validation
-The system enforces validation rules for algorithm outputs:
-- Score ranges must be between 0-1
-- DNA sequence patterns must match ATCGN format
+Specialized DNA sequence evaluation:
+- Secondary structure prediction for guide RNA
+- Challenge identification in target sequences
+- Risk factor assessment for sequence modifications
+- Custom validation rules for DNA patterns (ATCGN)
 
-Importance Score: 95 (Core domain algorithms for CRISPR guide RNA design)
+**Importance Score: 90** - Essential domain-specific analysis
+
+## Off-Target Assessment
+- `/src/lib/crispr/off-target-prediction.ts`
+
+Domain-specific scoring mechanisms:
+- CFD (Cutting Frequency Determination) algorithm
+- MIT specificity score calculation
+- Position-weighted mismatch penalties
+- Gene context impact analysis
+- Risk categorization for potential off-target sites
+
+**Importance Score: 85** - Critical safety and accuracy component
+
+## Batch Processing Pipeline
+- `/src/lib/crispr/batch-processing.ts`
+
+Multi-sequence processing:
+- Parallel guide RNA validation
+- Aggregate scoring system
+- Domain-specific sequence validation rules
+- Result aggregation with biological context
+
+**Importance Score: 75** - Important workflow optimization
 
 $END$
 

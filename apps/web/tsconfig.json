@@ -5,6 +5,10 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "baseUrl": ".",
+    "outDir": "./dist",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "module": "ESNext",
+    "target": "ES2022",
     "paths": {
       "@/*": ["./src/*"]
     }

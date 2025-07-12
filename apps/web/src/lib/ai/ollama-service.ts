@@ -65,7 +65,7 @@ class OllamaService {
               console.log(`✅ Ollama AI service initialized with model: ${modelName} (found working model)`)
               return true
             }
-          } catch (testError) {
+          } catch {
             console.log(`❌ ${modelName} failed`)
           }
         }
@@ -311,8 +311,8 @@ Be specific and actionable when possible.
     
     // More sophisticated fallback analysis
     const hasRepeats = /(.{3,})\1{2,}/.test(sequence)
-    const hasLowComplexity = /([ATCG])\1{4,}/.test(sequence)
-    const pamSites = (sequence.match(/[ATCG]GG/g) || []).length + (sequence.match(/CC[ATCG]/g) || []).length
+    const hasLowComplexity = /([ACGT])\1{4,}/.test(sequence)
+    const pamSites = (sequence.match(/[ACGT]GG/g) || []).length + (sequence.match(/CC[ACGT]/g) || []).length
     
     let analysis = `Sequence analysis: ${length} bp with ${gcContent.toFixed(1)}% GC content. `
     
@@ -368,7 +368,7 @@ Be specific and actionable when possible.
 
   private getFallbackGuideOptimization(guideSequence: string): GuideOptimizationResult {
     const gcContent = (guideSequence.match(/[CG]/g) || []).length / guideSequence.length * 100
-    const hasLongRuns = /([ATCG])\1{3,}/.test(guideSequence)
+    const hasLongRuns = /([ACGT])\1{3,}/.test(guideSequence)
     const hasPolyT = /TTTT/.test(guideSequence)
     const startsWithG = guideSequence.startsWith('G')
     const endsWithGG = guideSequence.endsWith('GG')
@@ -405,9 +405,7 @@ Be specific and actionable when possible.
     }
     
     // Position-specific recommendations
-    improvements.push('Validate guide position 10-20 bp upstream of PAM for optimal cutting')
-    improvements.push('Check for potential off-target sites using BLAST or similar tools')
-    improvements.push('Consider multiple guides targeting the same region for redundancy')
+    improvements.push('Validate guide position 10-20 bp upstream of PAM for optimal cutting', 'Check for potential off-target sites using BLAST or similar tools', 'Consider multiple guides targeting the same region for redundancy')
     
     const riskAssessment = `${riskLevel} risk - ${
       riskLevel === 'Low' ? 'Guide sequence appears well-optimized' :
