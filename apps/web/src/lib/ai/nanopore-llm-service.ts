@@ -486,7 +486,7 @@ JSON Response:
     const filledFields = Object.values(data).filter(v => v !== undefined && v !== null && v !== '').length
     const completeness = filledFields / totalFields
 
-    confidence = Math.min(confidence * (0.5 + completeness * 0.5), 1.0)
+    data.confidence = Math.min(confidence * (0.5 + completeness * 0.5), 1.0)
 
     return issues
   }
