@@ -75,7 +75,21 @@ start_postgres() {
     if command_exists brew; then
         if ! brew services list | grep postgresql | grep started > /dev/null; then
             print_status "Starting PostgreSQL..."
-            brew services start postgresql@15 || brew services start postgresql
+            if brew list postgresql@15 &> /dev/null; then
+                brew services start postgresql@15
+                print_success "Started PostgreSQL 15"
+            elif brew list postgresql@14 &> /dev/null; then
+                brew services start postgresql@14
+                print_success "Started PostgreSQL 14"
+            elif brew list postgresql &> /dev/null; then
+                brew services start postgresql
+                print_success "Started PostgreSQL"
+            else
+                print_error "PostgreSQL not installed. Installing PostgreSQL 15..."
+                brew install postgresql@15
+                brew services start postgresql@15
+                print_success "Installed and started PostgreSQL 15"
+            fi
         else
             print_success "PostgreSQL already running"
         fi
