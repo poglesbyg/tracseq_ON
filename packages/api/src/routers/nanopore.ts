@@ -4,6 +4,7 @@ import { z } from 'zod'
 import * as fileStorage from '../actions/nanopore/file-storage'
 import * as nanoporeGetters from '../actions/nanopore/getters'
 import * as nanoporeSetters from '../actions/nanopore/setters'
+import * as nanoporeExport from '../actions/nanopore/export'
 import { router, publicProcedure } from '../trpc'
 
 const createNanoporeSampleSchema = z.object({
@@ -465,4 +466,23 @@ export const nanoporeRouter = router({
         )
       }),
   }),
+
+  // Export nanopore samples
+  export: publicProcedure
+    .input(
+      z.object({
+        startDate: z.date(),
+        endDate: z.date(),
+        format: z.enum(['csv', 'json']).default('csv'),
+        includeAllUsers: z.boolean().default(false),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      return await nanoporeExport.exportNanoporeSamples(ctx.db, 'demo-user', {
+        startDate: input.startDate,
+        endDate: input.endDate,
+        format: input.format,
+        includeAllUsers: input.includeAllUsers,
+      })
+    }),
 })

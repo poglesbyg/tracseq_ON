@@ -14,6 +14,7 @@ import {
   FileText,
   Upload,
   Brain,
+  Download,
 } from 'lucide-react'
 import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
@@ -33,6 +34,7 @@ import { Input } from '../ui/input'
 import { Skeleton } from '../ui/skeleton'
 
 import { AssignModal } from './assign-modal'
+import { ExportModal } from './export-modal'
 import PdfUpload from './pdf-upload'
 import { ViewTaskModal } from './view-task-modal'
 
@@ -600,6 +602,7 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
 export default function NanoporeDashboard() {
   const [assignModalOpen, setAssignModalOpen] = useState(false)
   const [viewModalOpen, setViewModalOpen] = useState(false)
+  const [exportModalOpen, setExportModalOpen] = useState(false)
   const [selectedSample, setSelectedSample] = useState<NanoporeSample | null>(null)
   
   // Try to load real data, but fall back to mock data if not authenticated
@@ -734,6 +737,14 @@ export default function NanoporeDashboard() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setExportModalOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
           <Button variant="outline" onClick={() => window.location.reload()}>
             Refresh
           </Button>
@@ -783,6 +794,11 @@ export default function NanoporeDashboard() {
         isOpen={viewModalOpen}
         onClose={() => setViewModalOpen(false)}
         sample={selectedSample}
+      />
+
+      <ExportModal
+        isOpen={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
       />
     </div>
   )

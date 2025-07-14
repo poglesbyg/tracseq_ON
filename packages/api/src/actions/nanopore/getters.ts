@@ -262,3 +262,39 @@ export async function getSampleAttachments(
     .orderBy('uploadedAt', 'desc')
     .execute()
 }
+
+/**
+ * Get nanopore samples by date range
+ */
+export async function getNanoporeSamplesByDateRange(
+  db: Kysely<DB>,
+  userId: string,
+  startDate: Date,
+  endDate: Date,
+): Promise<Array<Selectable<NanoporeSample>>> {
+  return await db
+    .selectFrom('nanoporeSamples')
+    .selectAll()
+    .where('createdBy', '=', userId)
+    .where('submittedAt', '>=', startDate)
+    .where('submittedAt', '<=', endDate)
+    .orderBy('submittedAt', 'desc')
+    .execute()
+}
+
+/**
+ * Get all nanopore samples by date range (for team export)
+ */
+export async function getAllNanoporeSamplesByDateRange(
+  db: Kysely<DB>,
+  startDate: Date,
+  endDate: Date,
+): Promise<Array<Selectable<NanoporeSample>>> {
+  return await db
+    .selectFrom('nanoporeSamples')
+    .selectAll()
+    .where('submittedAt', '>=', startDate)
+    .where('submittedAt', '<=', endDate)
+    .orderBy('submittedAt', 'desc')
+    .execute()
+}
