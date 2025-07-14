@@ -299,6 +299,30 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
     chartField: '',
   })
 
+  // Add create mutation
+  const createMutation = trpc.nanopore.create.useMutation({
+    onSuccess: () => {
+      onSuccess()
+      setIsOpen(false)
+      setFormData({
+        sampleName: '',
+        projectId: '',
+        submitterName: '',
+        submitterEmail: '',
+        labName: '',
+        sampleType: 'DNA',
+        priority: 'normal',
+        chartField: '',
+      })
+      toast.success('Nanopore sample created successfully!')
+    },
+    onError: (error) => {
+      toast.error('Failed to create nanopore sample', {
+        description: error.message
+      })
+    }
+  })
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (
@@ -310,21 +334,8 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
       return
     }
 
-    // Simulate sample creation for development
-    console.log('Development mode: Creating nanopore sample:', formData)
-    onSuccess()
-    setIsOpen(false)
-    setFormData({
-      sampleName: '',
-      projectId: '',
-      submitterName: '',
-      submitterEmail: '',
-      labName: '',
-      sampleType: 'DNA',
-      priority: 'normal',
-      chartField: '',
-    })
-    alert('Development Mode: Nanopore sample created! (Not saved to database)')
+    // Use the database save mutation
+    createMutation.mutate(formData)
   }
 
   const handlePdfDataExtracted = useCallback((data: any, file: File) => {
@@ -380,7 +391,7 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
       <CardHeader>
         <CardTitle className="text-foreground">Submit New Sample</CardTitle>
         <CardDescription className="text-muted-foreground">
-          Add a new sample for Nanopore sequencing (Development Mode)
+          Add a new sample for Nanopore sequencing
         </CardDescription>
 
         {/* Tab Navigation */}
@@ -615,13 +626,15 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
               <Button
                 type="submit"
                 className="flex-1"
+                disabled={createMutation.isLoading}
               >
-                Submit Sample
+                {createMutation.isLoading ? 'Creating...' : 'Submit Sample'}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsOpen(false)}
+                disabled={createMutation.isLoading}
               >
                 Cancel
               </Button>
@@ -760,7 +773,7 @@ export default function NanoporeDashboard() {
   }
 
   const handleSuccess = () => {
-    console.log('Sample created successfully')
+    void refetch()
   }
 
   if (isLoading) {
