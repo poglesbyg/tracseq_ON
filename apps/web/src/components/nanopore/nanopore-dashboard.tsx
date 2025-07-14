@@ -34,6 +34,7 @@ import { Input } from '../ui/input'
 import { Skeleton } from '../ui/skeleton'
 
 import { AssignModal } from './assign-modal'
+import { EditTaskModal } from './edit-task-modal'
 import { ExportModal } from './export-modal'
 import PdfUpload from './pdf-upload'
 import { ViewTaskModal } from './view-task-modal'
@@ -634,6 +635,7 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
 
 export default function NanoporeDashboard() {
   const [assignModalOpen, setAssignModalOpen] = useState(false)
+  const [editModalOpen, setEditModalOpen] = useState(false)
   const [viewModalOpen, setViewModalOpen] = useState(false)
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [selectedSample, setSelectedSample] = useState<NanoporeSample | null>(null)
@@ -666,6 +668,21 @@ export default function NanoporeDashboard() {
     }
   })
 
+  // Update mutation
+  const updateMutation = trpc.nanopore.update.useMutation({
+    onSuccess: () => {
+      void refetch()
+      setEditModalOpen(false)
+      setSelectedSample(null)
+      toast.success('Sample updated successfully')
+    },
+    onError: (error) => {
+      toast.error('Failed to update sample', {
+        description: error.message
+      })
+    }
+  })
+
   const handleDelete = (id: string) => {
     if (
       confirm(
@@ -684,8 +701,11 @@ export default function NanoporeDashboard() {
   }
 
   const handleEdit = (id: string) => {
-    // Navigate to edit page (to be implemented)
-    window.location.assign(`/nanopore/sample/${id}/edit`)
+    const sample = samples?.find(s => s.id === id)
+    if (sample) {
+      setSelectedSample(sample)
+      setEditModalOpen(true)
+    }
   }
 
   const handleView = (id: string) => {
@@ -720,6 +740,22 @@ export default function NanoporeDashboard() {
       id: selectedSample.id,
       assignedTo,
       libraryPrepBy,
+    })
+  }
+
+  const handleEditSubmit = (id: string, updateData: Partial<NanoporeSample>) => {
+    if (isUsingMockData) {
+      toast.info('Development Mode: Changes not saved to database', {
+        description: `Would update ${updateData.sampleName || 'sample'} with new data`
+      })
+      setEditModalOpen(false)
+      setSelectedSample(null)
+      return
+    }
+
+    updateMutation.mutate({
+      id,
+      data: updateData,
     })
   }
 
@@ -822,6 +858,14 @@ export default function NanoporeDashboard() {
           sampleName={selectedSample.sampleName}
         />
       )}
+
+      <EditTaskModal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        onSave={handleEditSubmit}
+        sample={selectedSample}
+        isLoading={updateMutation.isLoading}
+      />
 
       <ViewTaskModal
         isOpen={viewModalOpen}
