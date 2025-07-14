@@ -34,6 +34,7 @@ import { Skeleton } from '../ui/skeleton'
 
 import { AssignModal } from './assign-modal'
 import PdfUpload from './pdf-upload'
+import { ViewTaskModal } from './view-task-modal'
 
 type NanoporeSample = {
   id: string
@@ -598,6 +599,7 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
 
 export default function NanoporeDashboard() {
   const [assignModalOpen, setAssignModalOpen] = useState(false)
+  const [viewModalOpen, setViewModalOpen] = useState(false)
   const [selectedSample, setSelectedSample] = useState<NanoporeSample | null>(null)
   
   // Try to load real data, but fall back to mock data if not authenticated
@@ -651,8 +653,11 @@ export default function NanoporeDashboard() {
   }
 
   const handleView = (id: string) => {
-    // Navigate to sample detail page
-    window.location.assign(`/nanopore/sample/${id}`)
+    const sample = samples?.find(s => s.id === id)
+    if (sample) {
+      setSelectedSample(sample)
+      setViewModalOpen(true)
+    }
   }
 
   const handleAssign = (id: string) => {
@@ -773,6 +778,12 @@ export default function NanoporeDashboard() {
           sampleName={selectedSample.sampleName}
         />
       )}
+
+      <ViewTaskModal
+        isOpen={viewModalOpen}
+        onClose={() => setViewModalOpen(false)}
+        sample={selectedSample}
+      />
     </div>
   )
 }
