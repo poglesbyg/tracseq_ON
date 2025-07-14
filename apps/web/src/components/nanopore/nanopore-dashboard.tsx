@@ -32,6 +32,7 @@ import {
 import { Input } from '../ui/input'
 import { Skeleton } from '../ui/skeleton'
 
+import { AssignModal } from './assign-modal'
 import PdfUpload from './pdf-upload'
 
 type NanoporeSample = {
@@ -596,11 +597,15 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
 }
 
 export default function NanoporeDashboard() {
+  const [assignModalOpen, setAssignModalOpen] = useState(false)
+  const [selectedSample, setSelectedSample] = useState<NanoporeSample | null>(null)
+  
   // Try to load real data, but fall back to mock data if not authenticated
   const {
     data: realSamples,
     isLoading,
     error,
+    refetch,
   } = trpc.nanopore.getAll.useQuery(undefined, {
     retry: false,
     refetchOnWindowFocus: false,
@@ -610,6 +615,18 @@ export default function NanoporeDashboard() {
   const samples =
     error?.data?.code === 'UNAUTHORIZED' ? mockNanoporeSamples : realSamples
   const isUsingMockData = error?.data?.code === 'UNAUTHORIZED'
+
+  // Assignment mutation
+  const assignMutation = trpc.nanopore.assign.useMutation({
+    onSuccess: () => {
+      void refetch()
+    },
+    onError: (error) => {
+      toast.error('Failed to assign sample', {
+        description: error.message
+      })
+    }
+  })
 
   const handleDelete = (id: string) => {
     if (
@@ -638,9 +655,31 @@ export default function NanoporeDashboard() {
     window.location.assign(`/nanopore/sample/${id}`)
   }
 
-  const handleAssign = (_id: string) => {
-    // Open assignment modal (to be implemented)
-    alert('Assignment functionality would be implemented here')
+  const handleAssign = (id: string) => {
+    const sample = samples?.find(s => s.id === id)
+    if (sample) {
+      setSelectedSample(sample)
+      setAssignModalOpen(true)
+    }
+  }
+
+  const handleAssignmentSubmit = (assignedTo: string, libraryPrepBy?: string) => {
+    if (!selectedSample) {
+      return
+    }
+    
+    if (isUsingMockData) {
+      toast.info('Development Mode: Assignment not saved to database', {
+        description: `Would assign ${selectedSample.sampleName} to ${assignedTo}${libraryPrepBy ? ` with library prep by ${libraryPrepBy}` : ''}`
+      })
+      return
+    }
+
+    assignMutation.mutate({
+      id: selectedSample.id,
+      assignedTo,
+      libraryPrepBy,
+    })
   }
 
   const handleSuccess = () => {
@@ -720,6 +759,19 @@ export default function NanoporeDashboard() {
             Submit your first Nanopore sequencing sample to get started.
           </p>
         </div>
+      )}
+
+      {selectedSample && (
+        <AssignModal
+          isOpen={assignModalOpen}
+          onClose={() => setAssignModalOpen(false)}
+          onAssign={handleAssignmentSubmit}
+          currentAssignment={{
+            assignedTo: selectedSample.assignedTo,
+            libraryPrepBy: selectedSample.libraryPrepBy,
+          }}
+          sampleName={selectedSample.sampleName}
+        />
       )}
     </div>
   )
