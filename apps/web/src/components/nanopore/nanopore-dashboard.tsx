@@ -296,6 +296,7 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
     labName: '',
     sampleType: 'DNA',
     priority: 'normal' as 'low' | 'normal' | 'high' | 'urgent',
+    chartField: '',
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -303,7 +304,8 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
     if (
       !formData.sampleName.trim() ||
       !formData.submitterName.trim() ||
-      !formData.submitterEmail.trim()
+      !formData.submitterEmail.trim() ||
+      !formData.chartField.trim()
     ) {
       return
     }
@@ -320,6 +322,7 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
       labName: '',
       sampleType: 'DNA',
       priority: 'normal',
+      chartField: '',
     })
     alert('Development Mode: Nanopore sample created! (Not saved to database)')
   }
@@ -335,6 +338,7 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
       projectId: data.projectName || prev.projectId,
       sampleType: data.sequencingType || prev.sampleType,
       priority: data.priority?.toLowerCase() || prev.priority,
+      chartField: data.chartField || prev.chartField,
     }))
 
     // Show success message with extraction info
@@ -574,6 +578,43 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
                 <option value="high">High</option>
                 <option value="urgent">Urgent</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1 text-white">
+                Chart Field *
+              </label>
+              <select
+                value={formData.chartField}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    chartField: e.target.value,
+                  }))
+                }
+                required
+                className="w-full px-3 py-2 bg-slate-800/90 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
+              >
+                <option value="">Select a chart field</option>
+                <option value="HTSF-001">HTSF-001</option>
+                <option value="HTSF-002">HTSF-002</option>
+                <option value="HTSF-003">HTSF-003</option>
+                <option value="HTSF-004">HTSF-004</option>
+                <option value="HTSF-005">HTSF-005</option>
+                <option value="NANO-001">NANO-001</option>
+                <option value="NANO-002">NANO-002</option>
+                <option value="NANO-003">NANO-003</option>
+                <option value="NANO-004">NANO-004</option>
+                <option value="NANO-005">NANO-005</option>
+                <option value="SEQ-001">SEQ-001</option>
+                <option value="SEQ-002">SEQ-002</option>
+                <option value="SEQ-003">SEQ-003</option>
+                <option value="SEQ-004">SEQ-004</option>
+                <option value="SEQ-005">SEQ-005</option>
+              </select>
+              <p className="text-xs text-slate-400 mt-1">
+                Chart field must be part of the intake validation list
+              </p>
             </div>
 
             <div className="flex gap-2">

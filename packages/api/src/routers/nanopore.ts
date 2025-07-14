@@ -6,6 +6,18 @@ import * as nanoporeGetters from '../actions/nanopore/getters'
 import * as nanoporeSetters from '../actions/nanopore/setters'
 import * as nanoporeExport from '../actions/nanopore/export'
 import { router, publicProcedure } from '../trpc'
+import { TRPCError } from '@trpc/server'
+
+// Valid chart fields for intake validation
+const VALID_CHART_FIELDS = [
+  'HTSF-001', 'HTSF-002', 'HTSF-003', 'HTSF-004', 'HTSF-005',
+  'NANO-001', 'NANO-002', 'NANO-003', 'NANO-004', 'NANO-005',
+  'SEQ-001', 'SEQ-002', 'SEQ-003', 'SEQ-004', 'SEQ-005'
+]
+
+function validateChartField(chartField: string): boolean {
+  return VALID_CHART_FIELDS.includes(chartField)
+}
 
 const createNanoporeSampleSchema = z.object({
   sampleName: z.string().min(1, 'Sample name is required').max(255),
@@ -23,6 +35,7 @@ const createNanoporeSampleSchema = z.object({
   priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
   assignedTo: z.string().optional(),
   libraryPrepBy: z.string().optional(),
+  chartField: z.string().min(1, 'Chart field is required for intake validation').max(255),
 })
 
 const createNanoporeSampleDetailsSchema = z.object({
@@ -175,6 +188,14 @@ export const nanoporeRouter = router({
   create: publicProcedure
     .input(createNanoporeSampleSchema)
     .mutation(async ({ input, ctx }) => {
+      // Validate chart field before creating the sample
+      if (!validateChartField(input.chartField)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Invalid chart field: ${input.chartField}. Chart field must be part of the intake validation list.`,
+        })
+      }
+
       const sampleData: nanoporeSetters.CreateNanoporeSampleInput = {
         ...input,
         createdBy: 'demo-user',
@@ -191,6 +212,14 @@ export const nanoporeRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      // Validate chart field before creating the sample
+      if (!validateChartField(input.sample.chartField)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Invalid chart field: ${input.sample.chartField}. Chart field must be part of the intake validation list.`,
+        })
+      }
+
       const sampleData: nanoporeSetters.CreateNanoporeSampleInput = {
         ...input.sample,
         createdBy: 'demo-user',

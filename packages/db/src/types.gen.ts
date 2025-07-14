@@ -231,6 +231,10 @@ export interface NanoporeSample {
    * Staff member currently responsible for the sample
    */
   assignedTo: string | null;
+  /**
+   * Chart field identifier required for intake validation
+   */
+  chartField: string;
   completedAt: Timestamp | null;
   concentration: Numeric | null;
   createdAt: Generated<Timestamp>;
