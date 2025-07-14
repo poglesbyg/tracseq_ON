@@ -180,14 +180,14 @@ function NanoporeSampleCard({
   onAssign,
 }: NanoporeSampleCardProps) {
   return (
-    <Card className="bg-white/5 border-white/20 backdrop-blur-sm hover:bg-white/10 transition-all duration-200">
+    <Card className="bg-card border-border hover:shadow-lg transition-all duration-200">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-lg text-white mb-1">
+            <CardTitle className="text-lg text-foreground mb-1">
               {sample.sampleName}
             </CardTitle>
-            <CardDescription className="text-slate-300">
+            <CardDescription className="text-muted-foreground">
               {sample.projectId && (
                 <span className="text-sm font-medium">
                   Project: {sample.projectId}
@@ -209,36 +209,36 @@ function NanoporeSampleCard({
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="space-y-2 text-sm text-slate-300">
+        <div className="space-y-2 text-sm text-muted-foreground">
           <div className="flex justify-between">
             <span>Submitter:</span>
-            <span className="text-white">{sample.submitterName}</span>
+            <span className="text-foreground font-medium">{sample.submitterName}</span>
           </div>
           <div className="flex justify-between">
             <span>Lab:</span>
-            <span className="text-white">
+            <span className="text-foreground font-medium">
               {sample.labName || 'Not specified'}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Sample Type:</span>
-            <span className="text-white">{sample.sampleType}</span>
+            <span className="text-foreground font-medium">{sample.sampleType}</span>
           </div>
           {sample.assignedTo && (
             <div className="flex justify-between">
               <span>Assigned to:</span>
-              <span className="text-white">{sample.assignedTo}</span>
+              <span className="text-foreground font-medium">{sample.assignedTo}</span>
             </div>
           )}
           {sample.libraryPrepBy && (
             <div className="flex justify-between">
               <span>Library Prep:</span>
-              <span className="text-white">{sample.libraryPrepBy}</span>
+              <span className="text-foreground font-medium">{sample.libraryPrepBy}</span>
             </div>
           )}
           <div className="flex justify-between">
             <span>Submitted:</span>
-            <span className="text-white">
+            <span className="text-foreground font-medium">
               {sample.submittedAt.toLocaleDateString()}
             </span>
           </div>
@@ -249,7 +249,7 @@ function NanoporeSampleCard({
             size="sm"
             variant="outline"
             onClick={() => onView(sample.id)}
-            className="flex-1 bg-white/10 border-white/30 text-white hover:bg-white/20"
+            className="flex-1"
           >
             <ExternalLink className="h-4 w-4 mr-1" />
             View
@@ -258,7 +258,7 @@ function NanoporeSampleCard({
             size="sm"
             variant="outline"
             onClick={() => onAssign(sample.id)}
-            className="flex-1 bg-white/10 border-white/30 text-white hover:bg-white/20"
+            className="flex-1"
           >
             <Users className="h-4 w-4 mr-1" />
             Assign
@@ -267,7 +267,6 @@ function NanoporeSampleCard({
             size="sm"
             variant="outline"
             onClick={() => onEdit(sample.id)}
-            className="bg-white/10 border-white/30 text-white hover:bg-white/20"
           >
             <Edit className="h-4 w-4" />
           </Button>
@@ -275,7 +274,7 @@ function NanoporeSampleCard({
             size="sm"
             variant="outline"
             onClick={() => onDelete(sample.id)}
-            className="bg-red-500/20 border-red-500/50 text-red-300 hover:bg-red-500/30"
+            className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -358,16 +357,16 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
 
   if (!isOpen) {
     return (
-      <Card className="border-dashed border-2 hover:border-blue-400 hover:bg-white/10 transition-all duration-200 cursor-pointer bg-white/5 border-white/30">
+      <Card className="border-dashed border-2 hover:border-primary hover:bg-muted/50 transition-all duration-200 cursor-pointer bg-muted/20 border-border">
         <CardContent
           className="flex flex-col items-center justify-center py-8 text-center"
           onClick={() => setIsOpen(true)}
         >
-          <Plus className="h-8 w-8 text-blue-400 mb-2" />
-          <CardTitle className="text-lg text-white">
+          <Plus className="h-8 w-8 text-primary mb-2" />
+          <CardTitle className="text-lg text-foreground">
             Submit New Sample
           </CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardDescription className="text-muted-foreground">
             Add a new Nanopore sequencing sample
           </CardDescription>
         </CardContent>
@@ -376,22 +375,22 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
   }
 
   return (
-    <Card className="bg-white/5 border-white/20 backdrop-blur-sm">
+    <Card className="bg-card border-border">
       <CardHeader>
-        <CardTitle className="text-white">Submit New Sample</CardTitle>
-        <CardDescription className="text-slate-400">
+        <CardTitle className="text-foreground">Submit New Sample</CardTitle>
+        <CardDescription className="text-muted-foreground">
           Add a new sample for Nanopore sequencing (Development Mode)
         </CardDescription>
 
         {/* Tab Navigation */}
-        <div className="flex gap-1 mt-4 p-1 bg-white/10 rounded-lg">
+        <div className="flex gap-1 mt-4 p-1 bg-muted rounded-lg">
           <button
             type="button"
             onClick={() => setActiveTab('manual')}
             className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
               activeTab === 'manual'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-white/10'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             }`}
           >
             <FileText className="h-4 w-4 inline mr-2" />
@@ -402,8 +401,8 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
             onClick={() => setActiveTab('pdf')}
             className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
               activeTab === 'pdf'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-white/10'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             }`}
           >
             <Upload className="h-4 w-4 inline mr-2" />
@@ -419,19 +418,19 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
               onFileUploaded={handleFileUploaded}
             />
             <div className="text-center">
-              <div className="bg-blue-50/10 border border-blue-200/30 rounded-lg p-4 mb-4">
+              <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 mb-4">
                 <div className="flex items-center justify-center gap-2 mb-2">
-                  <Brain className="h-5 w-5 text-blue-400" />
-                  <p className="text-sm font-medium text-blue-300">
+                  <Brain className="h-5 w-5 text-primary" />
+                  <p className="text-sm font-medium text-primary">
                     AI-Powered Data Extraction
                   </p>
                 </div>
-                <p className="text-xs text-slate-400 mb-2">
+                <p className="text-xs text-muted-foreground mb-2">
                   Our AI system can extract form data from Nanopore submission
                   PDFs with high accuracy. It uses both LLM analysis and pattern
                   matching for reliable results.
                 </p>
-                <div className="flex items-center justify-center gap-4 text-xs text-slate-500">
+                <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
                   <span>• Sample information</span>
                   <span>• Sequencing parameters</span>
                   <span>• Contact details</span>
@@ -441,7 +440,6 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
                 type="button"
                 variant="outline"
                 onClick={() => setActiveTab('manual')}
-                className="bg-white/10 border-white/30 text-white hover:bg-white/20"
               >
                 Or fill manually instead
               </Button>
@@ -450,7 +448,7 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1 text-white">
+              <label className="block text-sm font-medium mb-1 text-foreground">
                 Sample Name *
               </label>
               <Input
@@ -463,12 +461,11 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
                 }
                 placeholder="e.g., Human_DNA_Sample_001"
                 required
-                className="bg-slate-800/90 border-slate-600 text-white placeholder:text-slate-400 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1 text-white">
+              <label className="block text-sm font-medium mb-1 text-foreground">
                 Project ID
               </label>
               <Input
@@ -480,12 +477,11 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
                   }))
                 }
                 placeholder="e.g., HTSF-CJ-001"
-                className="bg-slate-800/90 border-slate-600 text-white placeholder:text-slate-400 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1 text-white">
+              <label className="block text-sm font-medium mb-1 text-foreground">
                 Submitter Name *
               </label>
               <Input
@@ -498,12 +494,11 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
                 }
                 placeholder="e.g., Dr. Sarah Johnson"
                 required
-                className="bg-slate-800/90 border-slate-600 text-white placeholder:text-slate-400 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1 text-white">
+              <label className="block text-sm font-medium mb-1 text-foreground">
                 Submitter Email *
               </label>
               <Input
@@ -517,12 +512,11 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
                 }
                 placeholder="e.g., sarah.johnson@unc.edu"
                 required
-                className="bg-slate-800/90 border-slate-600 text-white placeholder:text-slate-400 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1 text-white">
+              <label className="block text-sm font-medium mb-1 text-foreground">
                 Lab Name
               </label>
               <Input
@@ -531,12 +525,11 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
                   setFormData((prev) => ({ ...prev, labName: e.target.value }))
                 }
                 placeholder="e.g., Johnson Lab"
-                className="bg-slate-800/90 border-slate-600 text-white placeholder:text-slate-400 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1 text-white">
+              <label className="block text-sm font-medium mb-1 text-foreground">
                 Sample Type
               </label>
               <select
@@ -547,7 +540,7 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
                     sampleType: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-2 bg-slate-800/90 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
+                className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200"
               >
                 <option value="DNA">DNA</option>
                 <option value="RNA">RNA</option>
@@ -556,7 +549,7 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1 text-white">
+              <label className="block text-sm font-medium mb-1 text-foreground">
                 Priority
               </label>
               <select
@@ -571,7 +564,7 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
                       | 'urgent',
                   }))
                 }
-                className="w-full px-3 py-2 bg-slate-800/90 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
+                className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200"
               >
                 <option value="low">Low</option>
                 <option value="normal">Normal</option>
@@ -581,7 +574,7 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1 text-white">
+              <label className="block text-sm font-medium mb-1 text-foreground">
                 Chart Field *
               </label>
               <select
@@ -593,7 +586,7 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
                   }))
                 }
                 required
-                className="w-full px-3 py-2 bg-slate-800/90 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-slate-700 focus:border-blue-400 transition-all duration-200"
+                className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200"
               >
                 <option value="">Select a chart field</option>
                 <option value="HTSF-001">HTSF-001</option>
@@ -612,7 +605,7 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
                 <option value="SEQ-004">SEQ-004</option>
                 <option value="SEQ-005">SEQ-005</option>
               </select>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Chart field must be part of the intake validation list
               </p>
             </div>
@@ -620,7 +613,7 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
             <div className="flex gap-2">
               <Button
                 type="submit"
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                className="flex-1"
               >
                 Submit Sample
               </Button>
@@ -628,7 +621,6 @@ function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
                 type="button"
                 variant="outline"
                 onClick={() => setIsOpen(false)}
-                className="bg-white/10 border-white/30 text-white hover:bg-white/20"
               >
                 Cancel
               </Button>
@@ -740,22 +732,22 @@ export default function NanoporeDashboard() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-bold text-white">Nanopore Queue</h2>
-            <p className="text-slate-400">
+            <h2 className="text-3xl font-bold text-foreground">Nanopore Queue</h2>
+            <p className="text-muted-foreground">
               Oxford Nanopore sequencing sample tracking
             </p>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="bg-white/5 border-white/20">
+            <Card key={i} className="bg-card border-border">
               <CardContent className="p-6">
-                <Skeleton className="h-6 w-3/4 mb-4 bg-white/10" />
-                <Skeleton className="h-4 w-full mb-2 bg-white/10" />
-                <Skeleton className="h-4 w-2/3 mb-4 bg-white/10" />
+                <Skeleton className="h-6 w-3/4 mb-4" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-2/3 mb-4" />
                 <div className="flex gap-2">
-                  <Skeleton className="h-8 flex-1 bg-white/10" />
-                  <Skeleton className="h-8 flex-1 bg-white/10" />
+                  <Skeleton className="h-8 flex-1" />
+                  <Skeleton className="h-8 flex-1" />
                 </div>
               </CardContent>
             </Card>
