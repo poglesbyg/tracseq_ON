@@ -23,9 +23,9 @@ export function UtilityBar() {
   ]
 
   return (
-    <div className="bg-slate-600 text-white text-sm py-2 px-4">
+    <div className="bg-secondary text-secondary-foreground text-sm py-2 px-4">
       <div className="container mx-auto flex justify-between items-center">
-        <div className="text-xs">
+        <div className="text-xs text-muted-foreground">
           The University of North Carolina at Chapel Hill
         </div>
         <nav className="flex space-x-4">
@@ -35,7 +35,7 @@ export function UtilityBar() {
               href={link.href}
               target={link.external ? '_blank' : undefined}
               rel={link.external ? 'noopener noreferrer' : undefined}
-              className="text-white hover:text-blue-200 transition-colors duration-200 flex items-center space-x-1"
+              className="text-secondary-foreground hover:text-primary transition-colors duration-200 flex items-center space-x-1"
             >
               <span>{link.label}</span>
               {link.external && <ExternalLink className="h-3 w-3" />}
