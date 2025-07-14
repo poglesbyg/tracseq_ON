@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nanopore-config
+  labels:
+    app: nanopore-tracking-app
+data:
+  ollama-host: "http://ollama-service:11434"
+  app-name: "Nanopore Tracking App"
+  log-level: "info"

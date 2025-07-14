@@ -1,0 +1,37 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: nanopore-tracking-app
+  labels:
+    app: nanopore-tracking-app
+spec:
+  runPolicy: Serial
+  source:
+    type: Git
+    git:
+      uri: https://github.com/your-org/nanopore-tracking-app.git
+      ref: main
+    contextDir: "."
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: deployment/docker/Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: nanopore-tracking-app:latest
+  triggers:
+  - type: ConfigChange
+  - type: GitHub
+    github:
+      secret: github-webhook-secret
+  - type: Generic
+    generic:
+      secret: generic-webhook-secret
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: nanopore-tracking-app
+  labels:
+    app: nanopore-tracking-app

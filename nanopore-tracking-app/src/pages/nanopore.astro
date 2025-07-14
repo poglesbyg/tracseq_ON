@@ -1,0 +1,40 @@
+---
+import Layout from '@/layouts/layout.astro'
+import { NanoporeApp } from '@/components/nanopore/nanopore-app'
+---
+
+<Layout title="Nanopore Sequencing">
+  <div
+    id="nanopore-loading"
+    class="min-h-screen bg-background text-foreground flex items-center justify-center"
+  >
+    <div class="flex items-center space-x-2">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary">
+      </div>
+      <span class="text-lg">Loading Nanopore Dashboard...</span>
+    </div>
+  </div>
+  <div id="nanopore-app" style="display: none;">
+    <NanoporeApp client:only="react" />
+  </div>
+</Layout>
+
+<script>
+  // Handle the transition from loading to React component
+  function handleNanoporeLoad() {
+    const loadingElement = document.getElementById('nanopore-loading')
+    const appElement = document.getElementById('nanopore-app')
+
+    if (loadingElement && appElement) {
+      // Wait for React component to mount
+      setTimeout(() => {
+        loadingElement.style.display = 'none'
+        appElement.style.display = 'block'
+      }, 1500)
+    }
+  }
+
+  // Run on page load
+  document.addEventListener('DOMContentLoaded', handleNanoporeLoad)
+  document.addEventListener('astro:page-load', handleNanoporeLoad)
+</script>
