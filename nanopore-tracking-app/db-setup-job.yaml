@@ -1,0 +1,21 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nanopore-db-setup
+  labels:
+    app: nanopore-tracking-app
+spec:
+  template:
+    spec:
+      containers:
+      - name: db-setup
+        image: image-registry.openshift-image-registry.svc:5000/dept-barc/nanopore-tracking-app:latest
+        command: ["node", "scripts/setup-database.js"]
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: nanopore-secrets
+              key: database-url
+      restartPolicy: Never
+  backoffLimit: 3 

@@ -1,0 +1,124 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: nanopore-tracking-app-hpa
+  labels:
+    app: nanopore-tracking-app
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: nanopore-tracking-app
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+      - type: Pods
+        value: 1
+        periodSeconds: 60
+      selectPolicy: Min
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nanopore-tracking-app-service
+  labels:
+    app: nanopore-tracking-app
+spec:
+  selector:
+    app: nanopore-tracking-app
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3001
+    protocol: TCP
+  type: ClusterIP
+  sessionAffinity: None
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: nanopore-tracking-route
+  labels:
+    app: nanopore-tracking-app
+spec:
+  host: nanopore-tracking-route-dept-barc.apps.cloudapps.unc.edu
+  to:
+    kind: Service
+    name: nanopore-tracking-app-service
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nanopore-scaling-config
+  labels:
+    app: nanopore-tracking-app
+data:
+  # Scaling configuration
+  min-replicas: "2"
+  max-replicas: "6"
+  target-cpu-utilization: "70"
+  target-memory-utilization: "80"
+  
+  # Load balancing configuration
+  load-balancer-algorithm: "round_robin"
+  session-affinity: "none"
+  health-check-interval: "15s"
+  health-check-timeout: "5s"
+  
+  # Performance tuning
+  max-concurrent-requests: "100"
+  request-timeout: "30s"
+  keep-alive-timeout: "65s"
+  
+  # Database connection pooling
+  db-pool-min: "5"
+  db-pool-max: "20"
+  db-pool-idle-timeout: "30000"
+  db-pool-acquire-timeout: "10000"
+  
+  # Cache configuration
+  cache-max-size: "100mb"
+  cache-ttl: "300"
+  cache-check-period: "120"
+  
+  # Monitoring thresholds
+  cpu-alert-threshold: "85"
+  memory-alert-threshold: "90"
+  response-time-threshold: "2000"
+  error-rate-threshold: "5" 

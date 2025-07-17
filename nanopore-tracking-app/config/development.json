@@ -1,0 +1,54 @@
+{
+  "debug": true,
+  "server": {
+    "host": "localhost",
+    "port": 4321,
+    "session": {
+      "secure": false
+    }
+  },
+  "security": {
+    "bcryptRounds": 10,
+    "csrfProtection": false,
+    "helmet": {
+      "contentSecurityPolicy": false,
+      "hsts": false
+    }
+  },
+  "monitoring": {
+    "alerting": {
+      "enabled": false
+    },
+    "logging": {
+      "level": "debug",
+      "format": "text"
+    }
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "nanopore_tracking_dev",
+    "username": "postgres",
+    "ssl": false,
+    "maxConnections": 5
+  },
+  "cache": {
+    "redis": {
+      "host": "localhost",
+      "port": 6379,
+      "database": 0
+    }
+  },
+  "email": {
+    "smtp": {
+      "host": "localhost",
+      "port": 1025
+    },
+    "fromAddress": "dev@nanopore-tracking.local"
+  },
+  "backup": {
+    "s3": {
+      "bucket": "nanopore-backups-dev"
+    }
+  }
+} 

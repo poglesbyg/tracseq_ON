@@ -28,7 +28,6 @@ import PDFViewer from './pdf-viewer'
 interface PDFUploadProps {
   onDataExtracted?: (data: NanoporeFormData, file: File) => void
   onFileUploaded?: (file: File) => void
-  _sampleId?: string
 }
 
 interface UploadedFile {
@@ -43,7 +42,6 @@ interface UploadedFile {
 export default function PDFUpload({
   onDataExtracted,
   onFileUploaded,
-  _sampleId,
 }: PDFUploadProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
@@ -86,8 +84,8 @@ export default function PDFUpload({
                 f.id === uploadedFile.id
                   ? {
                       ...f,
-                      status: 'completed',
-                      extractedData: result.data,
+                      status: 'completed' as const,
+                      ...(result.data && { extractedData: result.data }),
                       processingTime,
                     }
                   : f,
@@ -234,7 +232,7 @@ export default function PDFUpload({
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full h-full max-w-7xl max-h-[95vh] overflow-hidden">
           <PDFViewer
             file={viewingFile.file}
-            extractedData={viewingFile.extractedData}
+            {...(viewingFile.extractedData && { extractedData: viewingFile.extractedData })}
             isProcessing={viewingFile.status === 'processing'}
             onClose={closeViewer}
           />

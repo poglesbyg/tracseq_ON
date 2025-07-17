@@ -1,0 +1,254 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: minimal-service-mesh-config
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: minimal-service-mesh
+data:
+  service-mesh.yaml: |
+    serviceMesh:
+      enabled: true
+      namespace: dept-barc
+      services:
+        - name: nanopore-tracking-app
+          port: 3001
+          replicas: 1
+          enableMutualTLS: false
+          enableTracing: false
+          loadBalancing:
+            algorithm: round_robin
+            healthCheckInterval: 60000
+      
+      mutualTLS:
+        enabled: false
+      
+      trafficManagement:
+        rateLimiting:
+          enabled: false
+        faultInjection:
+          enabled: false
+        canaryDeployment:
+          enabled: false
+      
+      monitoring:
+        enabled: true
+        metricsPort: 9090
+        healthCheckPath: /health
+        samplingRate: 0.01
+        exportInterval: 300000
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minimal-service-mesh
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: minimal-service-mesh
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nanopore-tracking
+      component: minimal-service-mesh
+  template:
+    metadata:
+      labels:
+        app: nanopore-tracking
+        component: minimal-service-mesh
+    spec:
+      serviceAccountName: nanopore-tracking-sa
+      containers:
+      - name: minimal-service-mesh
+        image: image-registry.openshift-image-registry.svc:5000/dept-barc/nanopore-tracking-app:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: SERVICE_MESH_ENABLED
+          value: "true"
+        - name: SERVICE_MESH_NAMESPACE
+          value: "dept-barc"
+        - name: MINIMAL_MODE
+          value: "true"
+        - name: MUTUAL_TLS_ENABLED
+          value: "false"
+        - name: TRACING_ENABLED
+          value: "false"
+        - name: METRICS_PORT
+          value: "9090"
+        - name: LOG_LEVEL
+          value: "warn"
+        volumeMounts:
+        - name: service-mesh-config
+          mountPath: /app/config/service-mesh
+          readOnly: true
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+      volumes:
+      - name: service-mesh-config
+        configMap:
+          name: minimal-service-mesh-config
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-mesh-integration
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: service-mesh-integration
+data:
+  integration.js: |
+    // Minimal service mesh integration for existing nanopore-tracking-app
+    const { ServiceMeshProxy } = require('./src/lib/service-mesh/ServiceMesh');
+    const { defaultServiceMeshConfigs } = require('./src/lib/service-mesh/ServiceMesh');
+    
+    // Initialize minimal service mesh
+    const serviceMeshConfig = {
+      ...defaultServiceMeshConfigs.development,
+      serviceName: 'nanopore-tracking-app',
+      namespace: 'dept-barc',
+      enableMutualTLS: false,
+      enableTracing: false,
+      enableMetrics: true,
+      loadBalancing: {
+        algorithm: 'round_robin',
+        healthCheckEnabled: true,
+        healthCheckInterval: 60000,
+        healthCheckPath: '/health'
+      }
+    };
+    
+    const serviceMesh = new ServiceMeshProxy(serviceMeshConfig);
+    
+    // Register the main application service
+    serviceMesh.registerService('nanopore-tracking-app', [{
+      id: 'main-app',
+      host: 'nanopore-tracking-app.dept-barc.svc.cluster.local',
+      port: 3001,
+      healthy: true,
+      weight: 100,
+      lastHealthCheck: new Date(),
+      responseTime: 0,
+      activeConnections: 0
+    }]);
+    
+    // Export for use in main application
+    module.exports = { serviceMesh };
+    
+    console.log('Minimal service mesh initialized');
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-mesh-scripts
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: service-mesh-scripts
+data:
+  deploy-minimal.sh: |
+    #!/bin/bash
+    set -e
+    
+    echo "Deploying minimal service mesh within quota constraints..."
+    
+    # Check current quota usage
+    echo "Current quota usage:"
+    oc describe quota -n dept-barc
+    
+    # Deploy minimal service mesh
+    echo "Deploying minimal service mesh..."
+    oc apply -f deployment/openshift/minimal-service-mesh.yaml
+    
+    # Wait for deployment
+    echo "Waiting for deployment to be ready..."
+    oc rollout status deployment/minimal-service-mesh -n dept-barc --timeout=300s
+    
+    # Check status
+    echo "Deployment status:"
+    oc get pods -l component=minimal-service-mesh -n dept-barc
+    
+    echo "Minimal service mesh deployed successfully!"
+    
+  check-resources.sh: |
+    #!/bin/bash
+    set -e
+    
+    echo "Checking resource usage..."
+    
+    # Check quota
+    echo "=== QUOTA USAGE ==="
+    oc describe quota -n dept-barc
+    
+    # Check pods
+    echo "=== PODS ==="
+    oc get pods -n dept-barc -o wide
+    
+    # Check services
+    echo "=== SERVICES ==="
+    oc get services -n dept-barc
+    
+    # Check deployments
+    echo "=== DEPLOYMENTS ==="
+    oc get deployments -n dept-barc
+    
+    # Check resource usage by pods
+    echo "=== RESOURCE USAGE BY PODS ==="
+    oc top pods -n dept-barc --no-headers | sort -k3 -nr
+    
+  cleanup-resources.sh: |
+    #!/bin/bash
+    set -e
+    
+    echo "Cleaning up resources to free quota..."
+    
+    # Delete unused deployments
+    echo "Deleting unused deployments..."
+    oc delete deployment prometheus -n dept-barc --ignore-not-found=true
+    oc delete deployment jaeger-collector -n dept-barc --ignore-not-found=true
+    oc delete deployment jaeger-query -n dept-barc --ignore-not-found=true
+    oc delete deployment envoy-proxy -n dept-barc --ignore-not-found=true
+    
+    # Delete unused services
+    echo "Deleting unused services..."
+    oc delete service prometheus -n dept-barc --ignore-not-found=true
+    oc delete service jaeger-collector -n dept-barc --ignore-not-found=true
+    oc delete service jaeger-query -n dept-barc --ignore-not-found=true
+    oc delete service envoy-proxy -n dept-barc --ignore-not-found=true
+    
+    # Delete unused configmaps
+    echo "Deleting unused configmaps..."
+    oc delete configmap service-mesh-dashboard -n dept-barc --ignore-not-found=true
+    oc delete configmap service-mesh-envoy-config -n dept-barc --ignore-not-found=true
+    
+    echo "Cleanup completed. Current quota usage:"
+    oc describe quota -n dept-barc 

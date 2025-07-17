@@ -1,0 +1,19 @@
+Sample Information Form
+
+Sample Name: TEST-001
+Submitter Name: John Doe
+Submitter Email: john.doe@example.com
+Lab Name: Genomics Lab
+Project Name: Test Project
+
+Sample Type: DNA
+Sample Buffer: TE Buffer
+Concentration: 50 ng/μL
+Volume: 20 μL
+Total Amount: 1000 ng
+Flow Cell Type: MinION
+Flow Cell Count: 1
+Priority: Normal
+Assigned To: staff1
+Library Prep By: lab_tech1
+Chart Field: NANO-001

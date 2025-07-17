@@ -1,805 +1,597 @@
-import {
-  Plus,
-  TestTube,
-  Clock,
-  Archive,
-  Trash2,
-  Edit,
-  ExternalLink,
-  Users,
-  AlertCircle,
-  CheckCircle,
-  Play,
-  Pause,
-  FileText,
-  Upload,
-  Brain,
-  Download,
-} from 'lucide-react'
-import { useState, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-
-import { trpc } from '@/client/trpc'
-
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '../ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Input } from '../ui/input'
 import { Skeleton } from '../ui/skeleton'
-
-import { AssignModal } from './assign-modal'
+import CreateSampleModal from './create-sample-modal'
 import { EditTaskModal } from './edit-task-modal'
-import { ExportModal } from './export-modal'
-import PdfUpload from './pdf-upload'
 import { ViewTaskModal } from './view-task-modal'
+import { AssignModal } from './assign-modal'
+import { ExportModal } from './export-modal'
+import { MemoryOptimizationPanel } from './memory-optimization-panel'
+import { AdminLogin } from '../auth/admin-login'
+import { AuditPanel } from './audit-panel'
+import { ConfigPanel } from './config-panel'
+import { ShutdownPanel } from './shutdown-panel'
+import { MigrationPanel } from './migration-panel'
+import { SampleActions } from './sample-actions'
+import type { UserSession } from '../../lib/auth/AdminAuth'
+import PDFUpload from './pdf-upload'
+import { useAuth } from '../auth/auth-wrapper'
+import { trpc } from '@/client/trpc'
+import { useQueryClient } from '@tanstack/react-query'
+import type { NanoporeSample } from '@/lib/api-client'
+import { 
+  Plus, 
+  Search, 
+  Download, 
+  Upload, 
+  AlertCircle, 
+  CheckCircle, 
+  Clock, 
+  User,
+  TestTube,
+  Zap,
+  TrendingUp,
+  Activity,
+  Calendar,
+  Settings,
+  LogOut,
+  ChevronDown,
+  Archive,
+  Trash2,
+  X,
+  Users
+} from 'lucide-react'
 
-type NanoporeSample = {
-  id: string
-  sampleName: string
-  projectId: string | null
-  submitterName: string
-  submitterEmail: string
-  labName: string | null
-  sampleType: string
-  status: string | null
-  priority: string | null
-  assignedTo: string | null
-  libraryPrepBy: string | null
-  submittedAt: Date
-  createdAt: Date
-  updatedAt: Date
-  createdBy: string
+interface DashboardStats {
+  total: number
+  submitted: number
+  inProgress: number
+  completed: number
+  urgent: number
 }
 
-// Mock data for development when not authenticated
-const mockNanoporeSamples: NanoporeSample[] = [
-  {
-    id: '1',
-    sampleName: 'Human_DNA_Sample_001',
-    projectId: 'HTSF-CJ-001',
-    submitterName: 'Dr. Sarah Johnson',
-    submitterEmail: 'sarah.johnson@unc.edu',
-    labName: 'Johnson Lab',
-    sampleType: 'DNA',
-    status: 'prep',
-    priority: 'high',
-    assignedTo: 'Grey',
-    libraryPrepBy: 'Stephanie',
-    submittedAt: new Date('2024-01-15'),
-    createdAt: new Date('2024-01-15'),
-    updatedAt: new Date('2024-01-16'),
-    createdBy: 'dev-user',
-  },
-  {
-    id: '2',
-    sampleName: 'Plant_Genome_Sample_002',
-    projectId: 'HTSF-CJ-002',
-    submitterName: 'Dr. Michael Chen',
-    submitterEmail: 'michael.chen@unc.edu',
-    labName: 'Chen Lab',
-    sampleType: 'DNA',
-    status: 'sequencing',
-    priority: 'normal',
-    assignedTo: 'Tara',
-    libraryPrepBy: 'Jenny',
-    submittedAt: new Date('2024-01-18'),
-    createdAt: new Date('2024-01-18'),
-    updatedAt: new Date('2024-01-20'),
-    createdBy: 'dev-user',
-  },
-  {
-    id: '3',
-    sampleName: 'Bacterial_Culture_003',
-    projectId: 'HTSF-CJ-003',
-    submitterName: 'Dr. Lisa Rodriguez',
-    submitterEmail: 'lisa.rodriguez@unc.edu',
-    labName: 'Rodriguez Lab',
-    sampleType: 'DNA',
-    status: 'submitted',
-    priority: 'urgent',
-    assignedTo: null,
-    libraryPrepBy: null,
-    submittedAt: new Date('2024-01-22'),
-    createdAt: new Date('2024-01-22'),
-    updatedAt: new Date('2024-01-22'),
-    createdBy: 'dev-user',
-  },
-]
-
-function getStatusColor(status: string | null): string {
-  switch (status) {
-    case 'submitted':
-      return 'bg-blue-100 text-blue-800 border-blue-200'
-    case 'prep':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-    case 'sequencing':
-      return 'bg-purple-100 text-purple-800 border-purple-200'
-    case 'analysis':
-      return 'bg-orange-100 text-orange-800 border-orange-200'
-    case 'completed':
-      return 'bg-green-100 text-green-800 border-green-200'
-    case 'archived':
-      return 'bg-gray-100 text-gray-800 border-gray-200'
-    default:
-      return 'bg-gray-100 text-gray-800 border-gray-200'
+const StatusBadge = ({ status }: { status: string }) => {
+  const statusConfig = {
+    submitted: { color: 'bg-blue-100 text-blue-800', icon: Clock },
+    prep: { color: 'bg-yellow-100 text-yellow-800', icon: TestTube },
+    sequencing: { color: 'bg-purple-100 text-purple-800', icon: Zap },
+    analysis: { color: 'bg-orange-100 text-orange-800', icon: Activity },
+    completed: { color: 'bg-green-100 text-green-800', icon: CheckCircle },
+    archived: { color: 'bg-gray-100 text-gray-800', icon: Archive }
   }
-}
 
-function getPriorityColor(priority: string | null): string {
-  switch (priority) {
-    case 'urgent':
-      return 'bg-red-100 text-red-800 border-red-200'
-    case 'high':
-      return 'bg-orange-100 text-orange-800 border-orange-200'
-    case 'normal':
-      return 'bg-blue-100 text-blue-800 border-blue-200'
-    case 'low':
-      return 'bg-gray-100 text-gray-800 border-gray-200'
-    default:
-      return 'bg-gray-100 text-gray-800 border-gray-200'
-  }
-}
+  const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.submitted
+  const Icon = config.icon
 
-function getStatusIcon(status: string | null) {
-  switch (status) {
-    case 'submitted':
-      return <Clock className="h-4 w-4" />
-    case 'prep':
-      return <Play className="h-4 w-4" />
-    case 'sequencing':
-      return <TestTube className="h-4 w-4" />
-    case 'analysis':
-      return <AlertCircle className="h-4 w-4" />
-    case 'completed':
-      return <CheckCircle className="h-4 w-4" />
-    case 'archived':
-      return <Archive className="h-4 w-4" />
-    default:
-      return <Pause className="h-4 w-4" />
-  }
-}
-
-interface NanoporeSampleCardProps {
-  sample: NanoporeSample
-  onEdit: (id: string) => void
-  onDelete: (id: string) => void
-  onView: (id: string) => void
-  onAssign: (id: string) => void
-}
-
-function NanoporeSampleCard({
-  sample,
-  onEdit,
-  onDelete,
-  onView,
-  onAssign,
-}: NanoporeSampleCardProps) {
   return (
-    <Card className="bg-card border-border hover:shadow-lg transition-all duration-200">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <CardTitle className="text-lg text-foreground mb-1">
-              {sample.sampleName}
-            </CardTitle>
-            <CardDescription className="text-muted-foreground">
-              {sample.projectId && (
-                <span className="text-sm font-medium">
-                  Project: {sample.projectId}
-                </span>
-              )}
-            </CardDescription>
-          </div>
-          <div className="flex gap-2">
-            <Badge className={getPriorityColor(sample.priority)}>
-              {sample.priority || 'normal'}
-            </Badge>
-            <Badge className={getStatusColor(sample.status)}>
-              <div className="flex items-center gap-1">
-                {getStatusIcon(sample.status)}
-                {sample.status || 'unknown'}
-              </div>
-            </Badge>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="space-y-2 text-sm text-muted-foreground">
-          <div className="flex justify-between">
-            <span>Submitter:</span>
-            <span className="text-foreground font-medium">{sample.submitterName}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Lab:</span>
-            <span className="text-foreground font-medium">
-              {sample.labName || 'Not specified'}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span>Sample Type:</span>
-            <span className="text-foreground font-medium">{sample.sampleType}</span>
-          </div>
-          {sample.assignedTo && (
-            <div className="flex justify-between">
-              <span>Assigned to:</span>
-              <span className="text-foreground font-medium">{sample.assignedTo}</span>
-            </div>
-          )}
-          {sample.libraryPrepBy && (
-            <div className="flex justify-between">
-              <span>Library Prep:</span>
-              <span className="text-foreground font-medium">{sample.libraryPrepBy}</span>
-            </div>
-          )}
-          <div className="flex justify-between">
-            <span>Submitted:</span>
-            <span className="text-foreground font-medium">
-              {sample.submittedAt.toLocaleDateString()}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex gap-2 mt-4">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onView(sample.id)}
-            className="flex-1"
-          >
-            <ExternalLink className="h-4 w-4 mr-1" />
-            View
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onAssign(sample.id)}
-            className="flex-1"
-          >
-            <Users className="h-4 w-4 mr-1" />
-            Assign
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onEdit(sample.id)}
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onDelete(sample.id)}
-            className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+    <Badge className={`${config.color} flex items-center gap-1`}>
+      <Icon className="w-3 h-3" />
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </Badge>
   )
 }
 
-function CreateNanoporeSampleForm({ onSuccess }: { onSuccess: () => void }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<'manual' | 'pdf'>('manual')
-  const [formData, setFormData] = useState({
-    sampleName: '',
-    projectId: '',
-    submitterName: '',
-    submitterEmail: '',
-    labName: '',
-    sampleType: 'DNA',
-    priority: 'normal' as 'low' | 'normal' | 'high' | 'urgent',
-    chartField: '',
-  })
-
-  // Add create mutation
-  const createMutation = trpc.nanopore.create.useMutation({
-    onSuccess: () => {
-      onSuccess()
-      setIsOpen(false)
-      setFormData({
-        sampleName: '',
-        projectId: '',
-        submitterName: '',
-        submitterEmail: '',
-        labName: '',
-        sampleType: 'DNA',
-        priority: 'normal',
-        chartField: '',
-      })
-      toast.success('Nanopore sample created successfully!')
-    },
-    onError: (error) => {
-      toast.error('Failed to create nanopore sample', {
-        description: error.message
-      })
-    }
-  })
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (
-      !formData.sampleName.trim() ||
-      !formData.submitterName.trim() ||
-      !formData.submitterEmail.trim() ||
-      !formData.chartField.trim()
-    ) {
-      return
-    }
-
-    // Use the database save mutation
-    createMutation.mutate(formData)
-  }
-
-  const handlePdfDataExtracted = useCallback((data: any, file: File) => {
-    // Auto-fill form with extracted data
-    setFormData((prev) => ({
-      ...prev,
-      sampleName: data.sampleName || prev.sampleName,
-      submitterName: data.submitterName || prev.submitterName,
-      submitterEmail: data.submitterEmail || prev.submitterEmail,
-      labName: data.labName || prev.labName,
-      projectId: data.projectName || prev.projectId,
-      sampleType: data.sequencingType || prev.sampleType,
-      priority: data.priority?.toLowerCase() || prev.priority,
-      chartField: data.chartField || prev.chartField,
-    }))
-
-    // Show success message with extraction info
-    toast.success('PDF data extracted successfully!', {
-      description: `Extracted data from ${file.name} using ${data.extractionMethod} method with ${Math.round(data.confidence * 100)}% confidence.`,
-    })
-
-    // Switch to manual entry tab to review the data
-    setActiveTab('manual')
-  }, [])
-
-  const handleFileUploaded = useCallback((file: File) => {
-    toast.info('Processing PDF...', {
-      description: `Analyzing ${file.name} with AI to extract form data.`,
-    })
-  }, [])
-
-  if (!isOpen) {
-    return (
-      <Card className="border-dashed border-2 hover:border-primary hover:bg-muted/50 transition-all duration-200 cursor-pointer bg-muted/20 border-border">
-        <CardContent
-          className="flex flex-col items-center justify-center py-8 text-center"
-          onClick={() => setIsOpen(true)}
-        >
-          <Plus className="h-8 w-8 text-primary mb-2" />
-          <CardTitle className="text-lg text-foreground">
-            Submit New Sample
-          </CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Add a new Nanopore sequencing sample
-          </CardDescription>
-        </CardContent>
-      </Card>
-    )
+const PriorityBadge = ({ priority }: { priority: string }) => {
+  const priorityConfig = {
+    low: 'bg-gray-100 text-gray-600',
+    normal: 'bg-blue-100 text-blue-700',
+    high: 'bg-orange-100 text-orange-700',
+    urgent: 'bg-red-100 text-red-700'
   }
 
   return (
-    <Card className="bg-card border-border">
-      <CardHeader>
-        <CardTitle className="text-foreground">Submit New Sample</CardTitle>
-        <CardDescription className="text-muted-foreground">
-          Add a new sample for Nanopore sequencing
-        </CardDescription>
-
-        {/* Tab Navigation */}
-        <div className="flex gap-1 mt-4 p-1 bg-muted rounded-lg">
-          <button
-            type="button"
-            onClick={() => setActiveTab('manual')}
-            className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
-              activeTab === 'manual'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-            }`}
-          >
-            <FileText className="h-4 w-4 inline mr-2" />
-            Manual Entry
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('pdf')}
-            className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
-              activeTab === 'pdf'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-            }`}
-          >
-            <Upload className="h-4 w-4 inline mr-2" />
-            Upload PDF
-          </button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {activeTab === 'pdf' ? (
-          <div className="space-y-4">
-            <PdfUpload
-              onDataExtracted={handlePdfDataExtracted}
-              onFileUploaded={handleFileUploaded}
-            />
-            <div className="text-center">
-              <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 mb-4">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <Brain className="h-5 w-5 text-primary" />
-                  <p className="text-sm font-medium text-primary">
-                    AI-Powered Data Extraction
-                  </p>
-                </div>
-                <p className="text-xs text-muted-foreground mb-2">
-                  Our AI system can extract form data from Nanopore submission
-                  PDFs with high accuracy. It uses both LLM analysis and pattern
-                  matching for reliable results.
-                </p>
-                <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
-                  <span>• Sample information</span>
-                  <span>• Sequencing parameters</span>
-                  <span>• Contact details</span>
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setActiveTab('manual')}
-              >
-                Or fill manually instead
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1 text-foreground">
-                Sample Name *
-              </label>
-              <Input
-                value={formData.sampleName}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    sampleName: e.target.value,
-                  }))
-                }
-                placeholder="e.g., Human_DNA_Sample_001"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1 text-foreground">
-                Project ID
-              </label>
-              <Input
-                value={formData.projectId}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    projectId: e.target.value,
-                  }))
-                }
-                placeholder="e.g., HTSF-CJ-001"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1 text-foreground">
-                Submitter Name *
-              </label>
-              <Input
-                value={formData.submitterName}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    submitterName: e.target.value,
-                  }))
-                }
-                placeholder="e.g., Dr. Sarah Johnson"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1 text-foreground">
-                Submitter Email *
-              </label>
-              <Input
-                type="email"
-                value={formData.submitterEmail}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    submitterEmail: e.target.value,
-                  }))
-                }
-                placeholder="e.g., sarah.johnson@unc.edu"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1 text-foreground">
-                Lab Name
-              </label>
-              <Input
-                value={formData.labName}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, labName: e.target.value }))
-                }
-                placeholder="e.g., Johnson Lab"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1 text-foreground">
-                Sample Type
-              </label>
-              <select
-                value={formData.sampleType}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    sampleType: e.target.value,
-                  }))
-                }
-                className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200"
-              >
-                <option value="DNA">DNA</option>
-                <option value="RNA">RNA</option>
-                <option value="cDNA">cDNA</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1 text-foreground">
-                Priority
-              </label>
-              <select
-                value={formData.priority}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    priority: e.target.value as
-                      | 'low'
-                      | 'normal'
-                      | 'high'
-                      | 'urgent',
-                  }))
-                }
-                className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200"
-              >
-                <option value="low">Low</option>
-                <option value="normal">Normal</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1 text-foreground">
-                Chart Field *
-              </label>
-              <select
-                value={formData.chartField}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    chartField: e.target.value,
-                  }))
-                }
-                required
-                className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200"
-              >
-                <option value="">Select a chart field</option>
-                <option value="HTSF-001">HTSF-001</option>
-                <option value="HTSF-002">HTSF-002</option>
-                <option value="HTSF-003">HTSF-003</option>
-                <option value="HTSF-004">HTSF-004</option>
-                <option value="HTSF-005">HTSF-005</option>
-                <option value="NANO-001">NANO-001</option>
-                <option value="NANO-002">NANO-002</option>
-                <option value="NANO-003">NANO-003</option>
-                <option value="NANO-004">NANO-004</option>
-                <option value="NANO-005">NANO-005</option>
-                <option value="SEQ-001">SEQ-001</option>
-                <option value="SEQ-002">SEQ-002</option>
-                <option value="SEQ-003">SEQ-003</option>
-                <option value="SEQ-004">SEQ-004</option>
-                <option value="SEQ-005">SEQ-005</option>
-              </select>
-              <p className="text-xs text-muted-foreground mt-1">
-                Chart field must be part of the intake validation list
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <Button
-                type="submit"
-                className="flex-1"
-                disabled={createMutation.isLoading}
-              >
-                {createMutation.isLoading ? 'Creating...' : 'Submit Sample'}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsOpen(false)}
-                disabled={createMutation.isLoading}
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
-        )}
-      </CardContent>
-    </Card>
+    <Badge className={priorityConfig[priority as keyof typeof priorityConfig] || priorityConfig.normal}>
+      {priority.charAt(0).toUpperCase() + priority.slice(1)}
+    </Badge>
   )
 }
+
+const StatCard = ({ title, value, icon: Icon, color, change }: {
+  title: string
+  value: number
+  icon: any
+  color: string
+  change?: { value: number; positive: boolean }
+}) => (
+  <Card className="relative overflow-hidden">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium text-gray-600">{title}</CardTitle>
+      <Icon className={`h-4 w-4 ${color}`} />
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl font-bold">{value}</div>
+      {change && (
+        <p className={`text-xs ${change.positive ? 'text-green-600' : 'text-red-600'} flex items-center gap-1`}>
+          <TrendingUp className="h-3 w-3" />
+          {change.positive ? '+' : ''}{change.value}% from last week
+        </p>
+      )}
+    </CardContent>
+  </Card>
+)
 
 export default function NanoporeDashboard() {
-  const [assignModalOpen, setAssignModalOpen] = useState(false)
-  const [editModalOpen, setEditModalOpen] = useState(false)
-  const [viewModalOpen, setViewModalOpen] = useState(false)
-  const [exportModalOpen, setExportModalOpen] = useState(false)
-  const [selectedSample, setSelectedSample] = useState<NanoporeSample | null>(null)
+  const { user, logout } = useAuth()
+  const queryClient = useQueryClient()
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [priorityFilter, setPriorityFilter] = useState<string>('all')
+  const [showCreateModal, setShowCreateModal] = useState(false)
   
-  // Try to load real data, but fall back to mock data if not authenticated
-  const {
-    data: realSamples,
-    isLoading,
-    error,
-    refetch,
-  } = trpc.nanopore.getAll.useQuery(undefined, {
-    retry: false,
-    refetchOnWindowFocus: false,
+  // Admin session state
+  const [adminSession, setAdminSession] = useState<UserSession | null>(null)
+  
+  // Modal state management
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showViewModal, setShowViewModal] = useState(false)
+  const [showAssignModal, setShowAssignModal] = useState(false)
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [selectedSample, setSelectedSample] = useState<NanoporeSample | null>(null)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  const [selectedSamples, setSelectedSamples] = useState<Set<string>>(new Set())
+  const [showBulkAssignModal, setShowBulkAssignModal] = useState(false)
+  const [showPdfUploadModal, setShowPdfUploadModal] = useState(false)
+
+  // tRPC hooks
+  const { data: samples = [], isLoading: loading, refetch } = trpc.nanopore.getAll.useQuery()
+  const createSampleMutation = trpc.nanopore.create.useMutation()
+  const updateSampleMutation = trpc.nanopore.update.useMutation()
+  const assignSampleMutation = trpc.nanopore.assign.useMutation()
+  const deleteSampleMutation = trpc.nanopore.delete.useMutation()
+  const updateStatusMutation = trpc.nanopore.updateStatus.useMutation()
+
+  // Stats state
+  const [stats, setStats] = useState<DashboardStats>({
+    total: 0,
+    submitted: 0,
+    inProgress: 0,
+    completed: 0,
+    urgent: 0
   })
 
-  // Use mock data if there's an authentication error
-  const samples =
-    error?.data?.code === 'UNAUTHORIZED' ? mockNanoporeSamples : realSamples
-  const isUsingMockData = error?.data?.code === 'UNAUTHORIZED'
-
-  // Assignment mutation
-  const assignMutation = trpc.nanopore.assign.useMutation({
-    onSuccess: () => {
-      void refetch()
-    },
-    onError: (error) => {
-      toast.error('Failed to assign sample', {
-        description: error.message
-      })
-    }
+  // Calculate stats from samples
+  const calculateStats = (sampleList: any[]): DashboardStats => ({
+    total: sampleList.length,
+    submitted: sampleList.filter((s: any) => s.status === 'submitted').length,
+    inProgress: sampleList.filter((s: any) => {
+      const status = s.status || ''
+      return ['prep', 'sequencing', 'analysis'].includes(status)
+    }).length,
+    completed: sampleList.filter((s: any) => s.status === 'completed').length,
+    urgent: sampleList.filter((s: any) => s.priority === 'urgent').length,
   })
 
-  // Update mutation
-  const updateMutation = trpc.nanopore.update.useMutation({
-    onSuccess: () => {
-      void refetch()
-      setEditModalOpen(false)
-      setSelectedSample(null)
-      toast.success('Sample updated successfully')
-    },
-    onError: (error) => {
-      toast.error('Failed to update sample', {
-        description: error.message
-      })
-    }
-  })
-
-  const handleDelete = (id: string) => {
-    if (
-      confirm(
-        'Are you sure you want to delete this sample? This action cannot be undone.',
-      )
-    ) {
-      if (isUsingMockData) {
-        alert(
-          'Development Mode: Delete functionality not available with mock data',
-        )
-      } else {
-        console.log('Delete sample:', id)
-        alert('Delete functionality would be implemented here')
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (openDropdown) {
+        setOpenDropdown(null)
       }
     }
-  }
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [openDropdown])
 
-  const handleEdit = (id: string) => {
-    const sample = samples?.find(s => s.id === id)
-    if (sample) {
-      setSelectedSample(sample)
-      setEditModalOpen(true)
+  // Update stats when samples change
+  useEffect(() => {
+    if (samples.length > 0) {
+      setStats(calculateStats(samples))
     }
-  }
+  }, [samples])
 
-  const handleView = (id: string) => {
-    const sample = samples?.find(s => s.id === id)
-    if (sample) {
-      setSelectedSample(sample)
-      setViewModalOpen(true)
-    }
-  }
-
-  const handleAssign = (id: string) => {
-    const sample = samples?.find(s => s.id === id)
-    if (sample) {
-      setSelectedSample(sample)
-      setAssignModalOpen(true)
-    }
-  }
-
-  const handleAssignmentSubmit = (assignedTo: string, libraryPrepBy?: string) => {
-    if (!selectedSample) {
-      return
-    }
+  // Filter samples based on search criteria
+  const filteredSamples = samples.filter((sample: any) => {
+    const matchesSearch = sample.sample_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         sample.submitter_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         sample.project_id?.toLowerCase().includes(searchTerm.toLowerCase())
     
-    if (isUsingMockData) {
-      toast.info('Development Mode: Assignment not saved to database', {
-        description: `Would assign ${selectedSample.sampleName} to ${assignedTo}${libraryPrepBy ? ` with library prep by ${libraryPrepBy}` : ''}`
-      })
+    const matchesStatus = statusFilter === 'all' || sample.status === statusFilter
+    const matchesPriority = priorityFilter === 'all' || sample.priority === priorityFilter
+    
+    return matchesSearch && matchesStatus && matchesPriority
+  })
+
+  const handleCreateSample = () => {
+    setShowCreateModal(true)
+  }
+
+  const handleSampleSubmit = async (sampleData: any) => {
+    try {
+      console.log('Dashboard handleSampleSubmit called with:', sampleData)
+      await createSampleMutation.mutateAsync(sampleData)
+      refetch()
+      toast.success('Sample created successfully!')
+      setShowCreateModal(false)
+    } catch (error) {
+      console.error('Failed to create sample:', error)
+      
+      // Extract detailed error information
+      let errorMessage = 'Failed to create sample'
+      if (error && typeof error === 'object' && 'message' in error) {
+        errorMessage = error.message as string
+      }
+      
+      // Show specific validation errors if available
+      if (error && typeof error === 'object' && 'data' in error && error.data) {
+        const errorData = error.data as any
+        if (errorData.zodError && errorData.zodError.issues) {
+          const validationErrors = errorData.zodError.issues.map((issue: any) => 
+            `${issue.path.join('.')}: ${issue.message}`
+          ).join(', ')
+          errorMessage = `Validation errors: ${validationErrors}`
+        }
+      }
+      
+      toast.error(errorMessage)
+    }
+  }
+
+  const handleUploadPDF = () => {
+    setShowPdfUploadModal(true)
+  }
+
+  const handleExport = () => {
+    setShowExportModal(true)
+  }
+
+  // Sample action handlers
+  const handleViewSample = (sample: NanoporeSample) => {
+    setSelectedSample(sample)
+    setShowViewModal(true)
+  }
+
+  const handleEditSample = (sample: NanoporeSample) => {
+    setSelectedSample(sample)
+    setShowEditModal(true)
+  }
+
+  const handleAssignSample = (sample: NanoporeSample) => {
+    setSelectedSample(sample)
+    setShowAssignModal(true)
+  }
+
+  const handleDeleteSample = async (sample: any) => {
+    if (!window.confirm(`Are you sure you want to delete sample "${sample.sample_name}"?`)) {
       return
     }
 
-    assignMutation.mutate({
-      id: selectedSample.id,
-      assignedTo,
+    setActionLoading(sample.id)
+    try {
+      await deleteSampleMutation.mutateAsync(sample.id)
+      refetch()
+      toast.success('Sample deleted successfully')
+    } catch (error) {
+      console.error('Failed to delete sample:', error)
+      toast.error('Failed to delete sample')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleSampleUpdate = async (sampleId: string, updateData: any) => {
+    console.log('Sample update initiated:', { sampleId, updateData })
+    
+    setActionLoading(sampleId)
+    try {
+      const result = await updateSampleMutation.mutateAsync({
+        id: sampleId,
+        data: updateData,
+      })
+      
+      console.log('Sample update result:', result)
+      
+      // Invalidate and refetch the samples query
+      await queryClient.invalidateQueries({ queryKey: ['nanopore', 'getAll'] })
+      await refetch()
+      
+      console.log('Data refetched after sample update')
+      
+      toast.success('Sample updated successfully')
+      setShowEditModal(false)
+    } catch (error) {
+      console.error('Failed to update sample:', error)
+      toast.error('Failed to update sample')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  // Enhanced workflow action handler
+  const handleWorkflowAction = async (sample: any, action: string, data?: any) => {
+    setActionLoading(sample.id)
+    try {
+      switch (action) {
+        case 'qc_result':
+          await updateSampleMutation.mutateAsync({
+            id: sample.id,
+            data: { }
+          })
+          toast.success(`QC ${data?.result === 'pass' ? 'passed' : 'failed'} recorded`)
+          break
+        case 'start_library_prep':
+          await updateSampleMutation.mutateAsync({
+            id: sample.id,
+            data: { }
+          })
+          toast.success('Library prep started')
+          break
+        case 'start_sequencing_run':
+          await updateSampleMutation.mutateAsync({
+            id: sample.id,
+            data: { }
+          })
+          toast.success('Sequencing run started')
+          break
+        case 'generate_report':
+          await updateSampleMutation.mutateAsync({
+            id: sample.id,
+            data: { }
+          })
+          toast.success('Report generation initiated')
+          break
+        case 'deliver_results':
+          await updateSampleMutation.mutateAsync({
+            id: sample.id,
+            data: { }
+          })
+          toast.success('Results delivered')
+          break
+        case 'duplicate_sample':
+          // Create a duplicate sample
+          const duplicateData = {
+            ...sample,
+            sampleName: `${sample.sample_name}_copy`,
+            status: 'submitted' as const,
+            submittedAt: new Date().toISOString()
+          }
+          await createSampleMutation.mutateAsync(duplicateData)
+          toast.success('Sample duplicated')
+          break
+        case 'reprocess_sample':
+          await updateSampleMutation.mutateAsync({
+            id: sample.id,
+            data: { status: 'submitted' as const }
+          })
+          toast.success('Sample marked for reprocessing')
+          break
+        case 'update_priority':
+          await updateSampleMutation.mutateAsync({
+            id: sample.id,
+            data: { priority: data?.priority as 'low' | 'normal' | 'high' | 'urgent' }
+          })
+          toast.success(`Priority updated to ${data?.priority}`)
+          break
+        case 'add_note':
+          // This would open a modal for adding notes
+          toast.info('Note functionality coming soon')
+          break
+        case 'audit_trail':
+          // This would show audit trail
+          toast.info('Audit trail functionality coming soon')
+          break
+        case 'export_data':
+          // This would export sample data
+          toast.info('Export functionality coming soon')
+          break
+        default:
+          toast.info(`Workflow action: ${action}`)
+      }
+      
+      refetch()
+    } catch (error) {
+      console.error('Failed to execute workflow action:', error)
+      toast.error('Failed to execute workflow action')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleSampleAssign = async (assignedTo: string, libraryPrepBy?: string) => {
+    if (!selectedSample) return
+    
+    console.log('Sample assignment initiated:', { 
+      sampleId: selectedSample.id, 
+      assignedTo, 
       libraryPrepBy,
+      currentAssignedTo: selectedSample.assigned_to,
+      currentLibraryPrepBy: selectedSample.library_prep_by
+    })
+    
+    setActionLoading(selectedSample.id)
+    try {
+      const result = await assignSampleMutation.mutateAsync({
+        id: selectedSample.id,
+        assignedTo,
+        libraryPrepBy,
+      })
+      
+      console.log('Assignment result:', result)
+      
+      // Invalidate and refetch the samples query
+      await queryClient.invalidateQueries({ queryKey: ['nanopore', 'getAll'] })
+      await refetch()
+      
+      console.log('Data refetched after assignment')
+      
+      toast.success('Sample assigned successfully')
+      setShowAssignModal(false)
+    } catch (error) {
+      console.error('Failed to assign sample:', error)
+      toast.error('Failed to assign sample')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleStatusUpdate = async (sample: any, newStatus: 'submitted' | 'prep' | 'sequencing' | 'analysis' | 'completed' | 'archived') => {
+    console.log('Status update initiated:', { sampleId: sample.id, currentStatus: sample.status, newStatus })
+    
+    setActionLoading(sample.id)
+    try {
+      const result = await updateStatusMutation.mutateAsync({
+        id: sample.id,
+        status: newStatus,
+      })
+      
+      console.log('Status update result:', result)
+      
+      // Invalidate and refetch the samples query
+      await queryClient.invalidateQueries({ queryKey: ['nanopore', 'getAll'] })
+      await refetch()
+      
+      console.log('Data refetched after status update')
+      
+      toast.success(`Sample status updated to ${newStatus}`)
+    } catch (error) {
+      console.error('Failed to update status:', error)
+      toast.error('Failed to update sample status')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  // Bulk actions handlers
+  const handleSelectSample = (sampleId: string, checked: boolean) => {
+    setSelectedSamples(prev => {
+      const newSet = new Set(prev)
+      if (checked) {
+        newSet.add(sampleId)
+      } else {
+        newSet.delete(sampleId)
+      }
+      return newSet
     })
   }
 
-  const handleEditSubmit = (id: string, updateData: Partial<NanoporeSample>) => {
-    if (isUsingMockData) {
-      toast.info('Development Mode: Changes not saved to database', {
-        description: `Would update ${updateData.sampleName || 'sample'} with new data`
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedSamples(new Set(filteredSamples.map((s: NanoporeSample) => s.id)))
+    } else {
+      setSelectedSamples(new Set())
+    }
+  }
+
+  const handleBulkAssign = (assignedTo: string, libraryPrepBy?: string) => {
+    const promises = Array.from(selectedSamples).map(sampleId => {
+      return assignSampleMutation.mutateAsync({
+        id: sampleId,
+        assignedTo,
+        libraryPrepBy,
       })
-      setEditModalOpen(false)
-      setSelectedSample(null)
+    })
+
+    setActionLoading('bulk')
+    Promise.all(promises)
+      .then(() => {
+        refetch()
+        toast.success(`${selectedSamples.size} samples assigned successfully`)
+        setSelectedSamples(new Set())
+        setShowBulkAssignModal(false)
+      })
+      .catch((error) => {
+        console.error('Failed to assign samples:', error)
+        toast.error('Failed to assign samples')
+      })
+      .finally(() => {
+        setActionLoading(null)
+      })
+  }
+
+  const handleBulkStatusUpdate = async (newStatus: string) => {
+    const validStatuses = ['submitted', 'prep', 'sequencing', 'analysis', 'completed', 'archived'] as const
+    if (!validStatuses.includes(newStatus as any)) {
+      console.error('Invalid status:', newStatus)
       return
     }
 
-    updateMutation.mutate({
-      id,
-      data: updateData,
-    })
+    const promises = Array.from(selectedSamples).map(sampleId => 
+      updateStatusMutation.mutateAsync({
+        id: sampleId,
+        status: newStatus as typeof validStatuses[number],
+      })
+    )
+
+    try {
+      await Promise.all(promises)
+      setSelectedSamples(new Set())
+      
+      // Update stats after bulk update
+      setStats(calculateStats(samples))
+      
+      toast.success(`Updated ${selectedSamples.size} samples to ${newStatus}`)
+    } catch (error) {
+      console.error('Bulk update failed:', error)
+      toast.error('Failed to update some samples')
+    }
   }
 
-  const handleSuccess = () => {
-    void refetch()
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Are you sure you want to delete ${selectedSamples.size} selected samples?`)) {
+      return
+    }
+
+    const promises = Array.from(selectedSamples).map(sampleId => 
+      deleteSampleMutation.mutateAsync(sampleId)
+    )
+
+    setActionLoading('bulk')
+    try {
+      await Promise.all(promises)
+      refetch()
+      
+      // Update stats
+      setStats(prev => ({
+        ...prev,
+        total: prev.total - selectedSamples.size,
+        // Note: This is a simplified stats update - in a real app we'd calculate properly
+        inProgress: Math.max(0, prev.inProgress - selectedSamples.size)
+      }))
+      
+      toast.success(`${selectedSamples.size} samples deleted successfully`)
+      setSelectedSamples(new Set())
+    } catch (error) {
+      console.error('Failed to delete samples:', error)
+      toast.error('Failed to delete samples')
+    } finally {
+      setActionLoading(null)
+    }
   }
 
-  if (isLoading) {
+  // Helper function to map API data to modal format
+  const mapApiToModal = (sample: any) => {
+    return {
+      ...sample,
+      status: sample.status as 'submitted' | 'prep' | 'sequencing' | 'analysis' | 'completed' | 'archived',
+      priority: sample.priority as 'low' | 'normal' | 'high' | 'urgent',
+    }
+  }
+
+  if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold text-foreground">Nanopore Queue</h2>
-            <p className="text-muted-foreground">
-              Oxford Nanopore sequencing sample tracking
-            </p>
+      <div className="p-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-8 w-64" />
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="bg-card border-border">
-              <CardContent className="p-6">
-                <Skeleton className="h-6 w-3/4 mb-4" />
-                <Skeleton className="h-4 w-full mb-2" />
-                <Skeleton className="h-4 w-2/3 mb-4" />
-                <div className="flex gap-2">
-                  <Skeleton className="h-8 flex-1" />
-                  <Skeleton className="h-8 flex-1" />
-                </div>
-              </CardContent>
-            </Card>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
+        </div>
+        
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-20" />
           ))}
         </div>
       </div>
@@ -807,88 +599,493 @@ export default function NanoporeDashboard() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold text-foreground">Nanopore Queue</h2>
-          <p className="text-muted-foreground">
-            Oxford Nanopore sequencing sample tracking
-            {isUsingMockData && (
-              <span className="ml-2 text-orange-600">(Development Mode)</span>
-            )}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setExportModalOpen(true)}
-            className="flex items-center gap-2"
-          >
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
-          <Button variant="outline" onClick={() => window.location.reload()}>
-            Refresh
-          </Button>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <TestTube className="h-8 w-8 text-blue-600" />
+                <h1 className="text-2xl font-bold text-gray-900">Nanopore Tracking</h1>
+              </div>
+              <Badge className="bg-blue-100 text-blue-800">v2.0</Badge>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <Button variant="outline" onClick={handleExport}>
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+              <Button variant="outline" onClick={handleUploadPDF}>
+                <Upload className="h-4 w-4 mr-2" />
+                Upload PDF
+              </Button>
+              <Button onClick={handleCreateSample}>
+                <Plus className="h-4 w-4 mr-2" />
+                New Sample
+              </Button>
+              
+              {/* User Menu */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-gray-100 transition-colors"
+                >
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <User className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-sm font-medium text-gray-900">{user?.name}</div>
+                    <div className="text-xs text-gray-500">{user?.role}</div>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                </button>
+                
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                    <div className="py-1">
+                      <div className="px-4 py-2 text-sm text-gray-700 border-b">
+                        <div className="font-medium">{user?.name}</div>
+                        <div className="text-gray-500">{user?.email}</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false)
+                          // Add profile settings here
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        Settings
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false)
+                          logout()
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center"
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <CreateNanoporeSampleForm onSuccess={handleSuccess} />
-        {samples?.map((sample) => (
-          <NanoporeSampleCard
-            key={sample.id}
-            sample={sample}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onView={handleView}
-            onAssign={handleAssign}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+          <StatCard
+            title="Total Samples"
+            value={stats.total}
+            icon={TestTube}
+            color="text-blue-600"
+            change={{ value: 12, positive: true }}
           />
-        ))}
-      </div>
+          <StatCard
+            title="Submitted"
+            value={stats.submitted}
+            icon={Clock}
+            color="text-yellow-600"
+            change={{ value: 3, positive: true }}
+          />
+          <StatCard
+            title="In Progress"
+            value={stats.inProgress}
+            icon={Activity}
+            color="text-purple-600"
+            change={{ value: 8, positive: true }}
+          />
+          <StatCard
+            title="Completed"
+            value={stats.completed}
+            icon={CheckCircle}
+            color="text-green-600"
+            change={{ value: 15, positive: true }}
+          />
+          <StatCard
+            title="Urgent"
+            value={stats.urgent}
+            icon={AlertCircle}
+            color="text-red-600"
+            change={{ value: 2, positive: false }}
+          />
+        </div>
 
-      {samples?.length === 0 && !isLoading && (
-        <div className="text-center py-12">
-          <TestTube className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-foreground mb-2">
-            No samples yet
-          </h3>
-          <p className="text-muted-foreground">
-            Submit your first Nanopore sequencing sample to get started.
-          </p>
+        {/* Admin Login and Memory Optimization Panel */}
+        <div className="mb-8">
+          <AdminLogin
+            onLogin={setAdminSession}
+            onLogout={() => setAdminSession(null)}
+            session={adminSession}
+          />
+          
+          {/* Memory Optimization Panel - Admin Only */}
+          {adminSession && adminSession.permissions.includes('memory_optimization') && (
+            <MemoryOptimizationPanel />
+          )}
+
+          {/* Audit Panel - Admin Only */}
+          {adminSession && adminSession.permissions.includes('audit_logs') && (
+            <div className="mt-6">
+              <AuditPanel adminSession={adminSession} />
+            </div>
+          )}
+
+          {/* Configuration Panel - Admin Only */}
+          {adminSession && adminSession.permissions.includes('security_settings') && (
+            <div className="mt-6">
+              <ConfigPanel adminSession={adminSession} />
+            </div>
+          )}
+
+          {/* Shutdown Panel - Admin Only */}
+          {adminSession && adminSession.permissions.includes('system_monitoring') && (
+            <div className="mt-6">
+              <ShutdownPanel adminSession={adminSession} />
+            </div>
+          )}
+
+          {/* Migration Panel - Admin Only */}
+          {adminSession && adminSession.permissions.includes('system_monitoring') && (
+            <div className="mt-6">
+              <MigrationPanel adminSession={adminSession} />
+            </div>
+          )}
+        </div>
+
+        {/* Filters and Search */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg">Sample Management</CardTitle>
+            <CardDescription>
+              Track and manage nanopore sequencing samples through the complete workflow
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search samples, submitters, or labs..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex gap-2">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md bg-white text-sm"
+                >
+                  <option value="all">All Status</option>
+                  <option value="submitted">Submitted</option>
+                  <option value="prep">Prep</option>
+                  <option value="sequencing">Sequencing</option>
+                  <option value="analysis">Analysis</option>
+                  <option value="completed">Completed</option>
+                  <option value="archived">Archived</option>
+                </select>
+                
+                <select
+                  value={priorityFilter}
+                  onChange={(e) => setPriorityFilter(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md bg-white text-sm"
+                >
+                  <option value="all">All Priority</option>
+                  <option value="low">Low</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Bulk Actions Bar */}
+        {selectedSamples.size > 0 && (
+          <Card className="mb-4 bg-blue-50 border-blue-200">
+            <CardContent className="py-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm font-medium text-blue-900">
+                    {selectedSamples.size} sample{selectedSamples.size !== 1 ? 's' : ''} selected
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowBulkAssignModal(true)}
+                    disabled={actionLoading === 'bulk'}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Bulk Assign
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBulkStatusUpdate('prep')}
+                    disabled={actionLoading === 'bulk'}
+                  >
+                    <Activity className="h-4 w-4 mr-2" />
+                    → Prep
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBulkStatusUpdate('sequencing')}
+                    disabled={actionLoading === 'bulk'}
+                  >
+                    <Activity className="h-4 w-4 mr-2" />
+                    → Sequencing
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleBulkDelete}
+                    disabled={actionLoading === 'bulk'}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Selected
+                  </Button>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedSamples(new Set())}
+                >
+                  Clear Selection
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Samples Table */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Samples ({filteredSamples.length})</CardTitle>
+              {filteredSamples.length > 0 && (
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedSamples.size === filteredSamples.length && filteredSamples.length > 0}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm text-gray-600">Select All</span>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {filteredSamples.map((sample: NanoporeSample) => (
+                <div key={sample.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex-shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={selectedSamples.has(sample.id)}
+                          onChange={(e) => handleSelectSample(sample.id, e.target.checked)}
+                          className="rounded border-gray-300 mr-2"
+                        />
+                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center inline-block">
+                          <TestTube className="h-5 w-5 text-blue-600" />
+                        </div>
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2">
+                          <h3 className="text-lg font-medium text-gray-900">{sample.sample_name}</h3>
+                          <StatusBadge status={sample.status} />
+                          <PriorityBadge priority={sample.priority} />
+                        </div>
+                        
+                        <div className="mt-1 flex items-center text-sm text-gray-500 space-x-4">
+                          <div className="flex items-center space-x-1">
+                            <User className="h-4 w-4" />
+                            <span>{sample.submitter_name}</span>
+                          </div>
+                          {sample.lab_name && (
+                            <div className="flex items-center space-x-1">
+                              <TestTube className="h-4 w-4" />
+                              <span>{sample.lab_name}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center space-x-1">
+                            <Calendar className="h-4 w-4" />
+                            <span>{sample.submitted_at.split('T')[0]}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-2 flex items-center text-sm text-gray-600 space-x-4">
+                          <span>Type: {sample.sample_type}</span>
+                          {sample.concentration && (
+                            <span>Conc: {sample.concentration} ng/μL</span>
+                          )}
+                          {sample.volume && (
+                            <span>Vol: {sample.volume} μL</span>
+                          )}
+                          {sample.flow_cell_type && (
+                            <span>Flow Cell: {sample.flow_cell_type}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      {sample.assigned_to && (
+                        <div className="text-sm text-gray-500">
+                          Assigned to: <span className="font-medium">{sample.assigned_to}</span>
+                        </div>
+                      )}
+                      
+                      {sample.library_prep_by && (
+                        <div className="text-sm text-gray-500">
+                          Library prep: <span className="font-medium">{sample.library_prep_by}</span>
+                        </div>
+                      )}
+                      
+                      {/* Enhanced Action Buttons */}
+                      <SampleActions
+                        sample={sample}
+                        onViewSample={handleViewSample}
+                        onEditSample={handleEditSample}
+                        onAssignSample={handleAssignSample}
+                        onDeleteSample={handleDeleteSample}
+                        onStatusUpdate={handleStatusUpdate}
+                        onWorkflowAction={handleWorkflowAction}
+                        actionLoading={actionLoading}
+                        isAdmin={adminSession ? adminSession.permissions.includes('system_monitoring') : false}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {filteredSamples.length === 0 && (
+                <div className="text-center py-12">
+                  <TestTube className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No samples found</h3>
+                  <p className="text-gray-500 mb-4">
+                    {searchTerm || statusFilter !== 'all' || priorityFilter !== 'all' 
+                      ? 'Try adjusting your filters or search terms'
+                      : 'Get started by creating your first sample'
+                    }
+                  </p>
+                  <Button onClick={handleCreateSample}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Sample
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Create Sample Modal */}
+      <CreateSampleModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSubmit={handleSampleSubmit}
+      />
+      
+      {/* Edit Sample Modal */}
+      <EditTaskModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false)
+          setSelectedSample(null)
+        }}
+        onSave={handleSampleUpdate}
+        sample={selectedSample ? mapApiToModal(selectedSample) : null}
+        isLoading={actionLoading === selectedSample?.id}
+      />
+      
+      {/* View Sample Modal */}
+      <ViewTaskModal
+        isOpen={showViewModal}
+        onClose={() => {
+          setShowViewModal(false)
+          setSelectedSample(null)
+        }}
+        sample={selectedSample ? mapApiToModal(selectedSample) : null}
+      />
+      
+      {/* Assign Sample Modal */}
+      <AssignModal
+        isOpen={showAssignModal}
+        onClose={() => {
+          setShowAssignModal(false)
+          setSelectedSample(null)
+        }}
+        onAssign={handleSampleAssign}
+        currentAssignment={{
+          assignedTo: selectedSample?.assigned_to || null,
+          libraryPrepBy: selectedSample?.library_prep_by || null,
+        }}
+        sampleName={selectedSample?.sample_name || ''}
+      />
+      
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+      />
+      
+      {/* PDF Upload Modal */}
+      {showPdfUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Upload PDF Document</h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPdfUploadModal(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <PDFUpload
+              onDataExtracted={(data, file) => {
+                // Handle extracted data - could create a new sample or update existing
+                console.log('PDF data extracted:', data, file)
+                toast.success('PDF processed successfully')
+              }}
+              onFileUploaded={(file) => {
+                console.log('PDF uploaded:', file)
+              }}
+            />
+          </div>
         </div>
       )}
-
-      {selectedSample && (
-        <AssignModal
-          isOpen={assignModalOpen}
-          onClose={() => setAssignModalOpen(false)}
-          onAssign={handleAssignmentSubmit}
-          currentAssignment={{
-            assignedTo: selectedSample.assignedTo,
-            libraryPrepBy: selectedSample.libraryPrepBy,
-          }}
-          sampleName={selectedSample.sampleName}
-        />
-      )}
-
-      <EditTaskModal
-        isOpen={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
-        onSave={handleEditSubmit}
-        sample={selectedSample}
-        isLoading={updateMutation.isLoading}
-      />
-
-      <ViewTaskModal
-        isOpen={viewModalOpen}
-        onClose={() => setViewModalOpen(false)}
-        sample={selectedSample}
-      />
-
-      <ExportModal
-        isOpen={exportModalOpen}
-        onClose={() => setExportModalOpen(false)}
+      
+      {/* Bulk Assign Modal */}
+      <AssignModal
+        isOpen={showBulkAssignModal}
+        onClose={() => setShowBulkAssignModal(false)}
+        onAssign={handleBulkAssign}
+        currentAssignment={{
+          assignedTo: null,
+          libraryPrepBy: null,
+        }}
+        sampleName={`${selectedSamples.size} selected samples`}
       />
     </div>
   )

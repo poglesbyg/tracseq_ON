@@ -4,15 +4,11 @@ import type {
   NanoporeProcessingStep,
   NanoporeAttachment,
   DB,
-} from '@app/db/types'
-import type { Selectable, Kysely } from 'kysely'
+} from '../../db/types'
+import type { Selectable, Kysely, ExpressionBuilder } from 'kysely'
 
 export interface NanoporeSampleWithDetails extends Selectable<NanoporeSample> {
   details: Selectable<NanoporeSampleDetail> | null
-}
-
-export interface NanoporeSampleWithSteps extends Selectable<NanoporeSample> {
-  processingSteps: Array<Selectable<NanoporeProcessingStep>>
 }
 
 export interface NanoporeSampleFull extends Selectable<NanoporeSample> {
@@ -22,17 +18,15 @@ export interface NanoporeSampleFull extends Selectable<NanoporeSample> {
 }
 
 /**
- * Get all nanopore samples for a user
+ * Get all nanopore samples
  */
-export async function getUserNanoporeSamples(
+export async function getAllNanoporeSamples(
   db: Kysely<DB>,
-  userId: string,
 ): Promise<Array<Selectable<NanoporeSample>>> {
   return await db
-    .selectFrom('nanoporeSamples')
+    .selectFrom('nanopore_samples')
     .selectAll()
-    .where('createdBy', '=', userId)
-    .orderBy('submittedAt', 'desc')
+    .orderBy('submitted_at', 'desc')
     .execute()
 }
 
@@ -44,39 +38,56 @@ export async function getNanoporeSampleById(
   sampleId: string,
   userId: string,
 ): Promise<Selectable<NanoporeSample> | null> {
-  return (
-    (await db
-      .selectFrom('nanoporeSamples')
-      .selectAll()
-      .where('id', '=', sampleId)
-      .where('createdBy', '=', userId)
-      .executeTakeFirst()) || null
-  )
+  return await db
+    .selectFrom('nanopore_samples')
+    .selectAll()
+    .where('id', '=', sampleId)
+    .where('created_by', '=', userId)
+    .executeTakeFirst() || null
 }
 
 /**
- * Get nanopore sample with details
+ * Get nanopore sample by ID for any user (admin function)
  */
-export async function getNanoporeSampleWithDetails(
+export async function getNanoporeSampleByIdAdmin(
   db: Kysely<DB>,
   sampleId: string,
-  userId: string,
-): Promise<NanoporeSampleWithDetails | null> {
-  const sample = await getNanoporeSampleById(db, sampleId, userId)
-  if (!sample) {
-    return null
-  }
-
-  const details = await db
-    .selectFrom('nanoporeSampleDetails')
+): Promise<Selectable<NanoporeSample> | null> {
+  return await db
+    .selectFrom('nanopore_samples')
     .selectAll()
-    .where('sampleId', '=', sampleId)
-    .executeTakeFirst()
+    .where('id', '=', sampleId)
+    .executeTakeFirst() || null
+}
 
-  return {
-    ...sample,
-    details: details ?? null,
-  }
+/**
+ * Get nanopore samples by status
+ */
+export async function getNanoporeSamplesByStatus(
+  db: Kysely<DB>,
+  status: string,
+): Promise<Array<Selectable<NanoporeSample>>> {
+  return await db
+    .selectFrom('nanopore_samples')
+    .selectAll()
+    .where('status', '=', status)
+    .orderBy('submitted_at', 'desc')
+    .execute()
+}
+
+/**
+ * Get nanopore samples by priority
+ */
+export async function getNanoporeSamplesByPriority(
+  db: Kysely<DB>,
+  priority: string,
+): Promise<Array<Selectable<NanoporeSample>>> {
+  return await db
+    .selectFrom('nanopore_samples')
+    .selectAll()
+    .where('priority', '=', priority)
+    .orderBy('submitted_at', 'desc')
+    .execute()
 }
 
 /**
@@ -94,21 +105,21 @@ export async function getNanoporeSampleFull(
 
   const [details, processingSteps, attachments] = await Promise.all([
     db
-      .selectFrom('nanoporeSampleDetails')
+      .selectFrom('nanopore_sample_details')
       .selectAll()
-      .where('sampleId', '=', sampleId)
+      .where('sample_id', '=', sampleId)
       .executeTakeFirst(),
     db
-      .selectFrom('nanoporeProcessingSteps')
+      .selectFrom('nanopore_processing_steps')
       .selectAll()
-      .where('sampleId', '=', sampleId)
-      .orderBy('createdAt', 'asc')
+      .where('sample_id', '=', sampleId)
+      .orderBy('created_at', 'asc')
       .execute(),
     db
-      .selectFrom('nanoporeAttachments')
+      .selectFrom('nanopore_attachments')
       .selectAll()
-      .where('sampleId', '=', sampleId)
-      .orderBy('uploadedAt', 'desc')
+      .where('sample_id', '=', sampleId)
+      .orderBy('uploaded_at', 'desc')
       .execute(),
   ])
 
@@ -121,145 +132,140 @@ export async function getNanoporeSampleFull(
 }
 
 /**
- * Get recent nanopore samples for dashboard
+ * Get nanopore sample with details only
  */
-export async function getRecentNanoporeSamples(
+export async function getNanoporeSampleWithDetails(
   db: Kysely<DB>,
+  sampleId: string,
   userId: string,
-  limit: number = 10,
-): Promise<Array<Selectable<NanoporeSample>>> {
-  return await db
-    .selectFrom('nanoporeSamples')
+): Promise<NanoporeSampleWithDetails | null> {
+  const sample = await getNanoporeSampleById(db, sampleId, userId)
+  if (!sample) {
+    return null
+  }
+
+  const details = await db
+    .selectFrom('nanopore_sample_details')
     .selectAll()
-    .where('createdBy', '=', userId)
-    .orderBy('submittedAt', 'desc')
-    .limit(limit)
+    .where('sample_id', '=', sampleId)
+    .executeTakeFirst()
+
+  return {
+    ...sample,
+    details: details || null,
+  }
+}
+
+/**
+ * Get all nanopore samples with their details
+ */
+export async function getAllNanoporeSamplesWithDetails(
+  db: Kysely<DB>,
+): Promise<Array<NanoporeSampleWithDetails>> {
+  const samples = await getAllNanoporeSamples(db)
+  
+  const samplesWithDetails = await Promise.all(
+    samples.map(async (sample) => {
+      const details = await db
+        .selectFrom('nanopore_sample_details')
+        .selectAll()
+        .where('sample_id', '=', sample.id)
+        .executeTakeFirst()
+
+      return {
+        ...sample,
+        details: details || null,
+      }
+    })
+  )
+
+  return samplesWithDetails
+}
+
+/**
+ * Search nanopore samples
+ */
+export async function searchNanoporeSamples(
+  db: Kysely<DB>,
+  searchTerm: string,
+  userId?: string,
+): Promise<Array<Selectable<NanoporeSample>>> {
+  let query = db
+    .selectFrom('nanopore_samples')
+    .selectAll()
+    .where((eb: ExpressionBuilder<DB, 'nanopore_samples'>) => eb.or([
+      eb('sample_name', 'ilike', `%${searchTerm}%`),
+      eb('submitter_name', 'ilike', `%${searchTerm}%`),
+      eb('submitter_email', 'ilike', `%${searchTerm}%`),
+      eb('lab_name', 'ilike', `%${searchTerm}%`),
+    ]))
+
+  if (userId) {
+    query = query.where('created_by', '=', userId)
+  }
+
+  return await query
+    .orderBy('submitted_at', 'desc')
     .execute()
 }
 
 /**
- * Get nanopore samples by status
+ * Get nanopore samples assigned to a specific user
  */
-export async function getNanoporeSamplesByStatus(
-  db: Kysely<DB>,
-  userId: string,
-  status: string,
-): Promise<Array<Selectable<NanoporeSample>>> {
-  return await db
-    .selectFrom('nanoporeSamples')
-    .selectAll()
-    .where('createdBy', '=', userId)
-    .where('status', '=', status)
-    .orderBy('submittedAt', 'desc')
-    .execute()
-}
-
-/**
- * Get nanopore samples by priority
- */
-export async function getNanoporeSamplesByPriority(
-  db: Kysely<DB>,
-  userId: string,
-  priority: string,
-): Promise<Array<Selectable<NanoporeSample>>> {
-  return await db
-    .selectFrom('nanoporeSamples')
-    .selectAll()
-    .where('createdBy', '=', userId)
-    .where('priority', '=', priority)
-    .orderBy('submittedAt', 'desc')
-    .execute()
-}
-
-/**
- * Get nanopore samples assigned to a specific team member
- */
-export async function getNanoporeSamplesByAssignee(
+export async function getNanoporeSamplesAssignedTo(
   db: Kysely<DB>,
   assignedTo: string,
 ): Promise<Array<Selectable<NanoporeSample>>> {
   return await db
-    .selectFrom('nanoporeSamples')
+    .selectFrom('nanopore_samples')
     .selectAll()
-    .where('assignedTo', '=', assignedTo)
-    .orderBy('priority', 'desc')
-    .orderBy('submittedAt', 'asc')
+    .where('assigned_to', '=', assignedTo)
+    .orderBy('submitted_at', 'desc')
     .execute()
-}
-
-/**
- * Get all nanopore samples (for team view)
- */
-export async function getAllNanoporeSamples(
-  db: Kysely<DB>,
-): Promise<Array<Selectable<NanoporeSample>>> {
-  return await db
-    .selectFrom('nanoporeSamples')
-    .selectAll()
-    .orderBy('submittedAt', 'desc')
-    .execute()
-}
-
-/**
- * Get nanopore queue for team dashboard
- */
-export async function getNanoporeQueue(
-  db: Kysely<DB>,
-): Promise<Array<NanoporeSampleWithSteps>> {
-  const samples = await db
-    .selectFrom('nanoporeSamples')
-    .selectAll()
-    .where('status', 'in', ['submitted', 'prep', 'sequencing', 'analysis'])
-    .orderBy('priority', 'desc')
-    .orderBy('submittedAt', 'asc')
-    .execute()
-
-  const samplesWithSteps = await Promise.all(
-    samples.map(async (sample) => {
-      const processingSteps = await db
-        .selectFrom('nanoporeProcessingSteps')
-        .selectAll()
-        .where('sampleId', '=', sample.id)
-        .orderBy('createdAt', 'asc')
-        .execute()
-
-      return {
-        ...sample,
-        processingSteps,
-      }
-    }),
-  )
-
-  return samplesWithSteps
 }
 
 /**
  * Get processing steps for a sample
  */
-export async function getProcessingSteps(
+export async function getProcessingStepsForSample(
   db: Kysely<DB>,
   sampleId: string,
 ): Promise<Array<Selectable<NanoporeProcessingStep>>> {
   return await db
-    .selectFrom('nanoporeProcessingSteps')
+    .selectFrom('nanopore_processing_steps')
     .selectAll()
-    .where('sampleId', '=', sampleId)
-    .orderBy('createdAt', 'asc')
+    .where('sample_id', '=', sampleId)
+    .orderBy('created_at', 'asc')
     .execute()
 }
 
 /**
- * Get sample attachments
+ * Get attachments for a sample
  */
-export async function getSampleAttachments(
+export async function getAttachmentsForSample(
   db: Kysely<DB>,
   sampleId: string,
 ): Promise<Array<Selectable<NanoporeAttachment>>> {
   return await db
-    .selectFrom('nanoporeAttachments')
+    .selectFrom('nanopore_attachments')
     .selectAll()
-    .where('sampleId', '=', sampleId)
-    .orderBy('uploadedAt', 'desc')
+    .where('sample_id', '=', sampleId)
+    .orderBy('uploaded_at', 'desc')
+    .execute()
+}
+
+/**
+ * Get nanopore samples by user
+ */
+export async function getNanoporeSamplesByUser(
+  db: Kysely<DB>,
+  userId: string,
+): Promise<Array<Selectable<NanoporeSample>>> {
+  return await db
+    .selectFrom('nanopore_samples')
+    .selectAll()
+    .where('created_by', '=', userId)
+    .orderBy('submitted_at', 'desc')
     .execute()
 }
 
@@ -268,22 +274,20 @@ export async function getSampleAttachments(
  */
 export async function getNanoporeSamplesByDateRange(
   db: Kysely<DB>,
-  userId: string,
   startDate: Date,
   endDate: Date,
 ): Promise<Array<Selectable<NanoporeSample>>> {
   return await db
-    .selectFrom('nanoporeSamples')
+    .selectFrom('nanopore_samples')
     .selectAll()
-    .where('createdBy', '=', userId)
-    .where('submittedAt', '>=', startDate)
-    .where('submittedAt', '<=', endDate)
-    .orderBy('submittedAt', 'desc')
+    .where('submitted_at', '>=', startDate.toISOString())
+    .where('submitted_at', '<=', endDate.toISOString())
+    .orderBy('submitted_at', 'desc')
     .execute()
 }
 
 /**
- * Get all nanopore samples by date range (for team export)
+ * Get all nanopore samples by date range (admin function)
  */
 export async function getAllNanoporeSamplesByDateRange(
   db: Kysely<DB>,
@@ -291,10 +295,10 @@ export async function getAllNanoporeSamplesByDateRange(
   endDate: Date,
 ): Promise<Array<Selectable<NanoporeSample>>> {
   return await db
-    .selectFrom('nanoporeSamples')
+    .selectFrom('nanopore_samples')
     .selectAll()
-    .where('submittedAt', '>=', startDate)
-    .where('submittedAt', '<=', endDate)
-    .orderBy('submittedAt', 'desc')
+    .where('submitted_at', '>=', startDate.toISOString())
+    .where('submitted_at', '<=', endDate.toISOString())
+    .orderBy('submitted_at', 'desc')
     .execute()
 }

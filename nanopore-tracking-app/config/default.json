@@ -1,0 +1,82 @@
+{
+  "appName": "Nanopore Tracking App",
+  "version": "1.0.0",
+  "server": {
+    "cors": {
+      "origins": ["http://localhost:4321", "http://localhost:3000"],
+      "credentials": true
+    },
+    "rateLimiting": {
+      "windowMs": 900000,
+      "max": 100
+    },
+    "session": {
+      "maxAge": 3600000,
+      "httpOnly": true
+    }
+  },
+  "security": {
+    "bcryptRounds": 12,
+    "csrfProtection": true,
+    "helmet": {
+      "contentSecurityPolicy": true,
+      "hsts": true,
+      "xssFilter": true
+    }
+  },
+  "monitoring": {
+    "enabled": true,
+    "metricsPort": 9090,
+    "healthCheckInterval": 30000,
+    "alerting": {
+      "enabled": false,
+      "channels": ["email"]
+    },
+    "logging": {
+      "level": "info",
+      "format": "json",
+      "maxFiles": 10,
+      "maxSize": "10MB"
+    }
+  },
+  "cache": {
+    "ttl": {
+      "default": 3600,
+      "session": 7200,
+      "api": 300
+    }
+  },
+  "email": {
+    "smtp": {
+      "port": 587,
+      "secure": false
+    },
+    "templates": {
+      "notification": "notification",
+      "alert": "alert",
+      "backup": "backup"
+    },
+    "adminEmails": []
+  },
+  "backup": {
+    "s3": {
+      "region": "us-east-1"
+    },
+    "schedule": {
+      "full": "0 2 * * *",
+      "incremental": "0 */6 * * *"
+    },
+    "retention": {
+      "days": 30,
+      "maxBackups": 100
+    }
+  },
+  "features": {
+    "pdfProcessing": true,
+    "aiExtraction": true,
+    "realTimeUpdates": true,
+    "auditLogging": true,
+    "memoryOptimization": true,
+    "backupRecovery": true
+  }
+} 

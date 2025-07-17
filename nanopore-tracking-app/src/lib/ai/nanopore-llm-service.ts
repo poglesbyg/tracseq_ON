@@ -85,7 +85,7 @@ class NanoporeFormExtractionService {
       let extractionMethod: 'llm' | 'pattern' | 'hybrid' | 'rag' = 'pattern'
 
       // Step 3: Try LLM extraction first if available
-      if (aiService.isAIAvailable()) {
+      if (await aiService.isAvailable()) {
         try {
           const llmResult = await this.extractWithLLM(rawText)
           if (llmResult) {
@@ -151,6 +151,12 @@ class NanoporeFormExtractionService {
 
       // Step 6: Final validation and confidence calculation
       const processingTime = Date.now() - startTime
+      
+      // Ensure formData is not null (should never happen due to fallback)
+      if (!formData) {
+        throw new Error('Failed to extract any data from PDF')
+      }
+      
       const validationIssues = this.validateExtractedData(formData)
 
       // Adjust confidence based on validation issues

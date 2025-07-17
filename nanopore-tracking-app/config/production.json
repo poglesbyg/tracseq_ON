@@ -1,0 +1,74 @@
+{
+  "debug": false,
+  "server": {
+    "host": "0.0.0.0",
+    "port": 4321,
+    "cors": {
+      "origins": ["https://nanopore-tracking.example.com"]
+    },
+    "rateLimiting": {
+      "windowMs": 900000,
+      "max": 50
+    },
+    "session": {
+      "secure": true,
+      "maxAge": 1800000
+    }
+  },
+  "security": {
+    "bcryptRounds": 14,
+    "csrfProtection": true,
+    "helmet": {
+      "contentSecurityPolicy": true,
+      "hsts": true,
+      "xssFilter": true
+    }
+  },
+  "monitoring": {
+    "enabled": true,
+    "alerting": {
+      "enabled": true,
+      "channels": ["email", "slack"]
+    },
+    "logging": {
+      "level": "warn",
+      "format": "json",
+      "maxFiles": 30,
+      "maxSize": "50MB"
+    }
+  },
+  "database": {
+    "ssl": true,
+    "maxConnections": 20,
+    "connectionTimeout": 10000,
+    "idleTimeout": 600000
+  },
+  "cache": {
+    "ttl": {
+      "default": 1800,
+      "session": 3600,
+      "api": 120
+    }
+  },
+  "email": {
+    "smtp": {
+      "port": 587,
+      "secure": true
+    },
+    "fromAddress": "noreply@nanopore-tracking.example.com"
+  },
+  "backup": {
+    "s3": {
+      "bucket": "nanopore-backups-prod"
+    },
+    "retention": {
+      "days": 90,
+      "maxBackups": 500
+    }
+  },
+  "features": {
+    "memoryOptimization": true,
+    "auditLogging": true,
+    "backupRecovery": true
+  }
+} 

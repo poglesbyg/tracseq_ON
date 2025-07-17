@@ -1,0 +1,349 @@
+---
+# Resource-Optimized Deployment for OpenShift
+# Designed for quota constraints: 1 pod available, 0 services available
+# This configuration consolidates all functionality into a single pod
+# while maintaining production-ready features
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nanopore-tracking-app
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    version: v1
+    deployment-type: resource-optimized
+spec:
+  replicas: 1  # Only 1 pod available in quota
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: nanopore-tracking-app
+  template:
+    metadata:
+      labels:
+        app: nanopore-tracking-app
+        version: v1
+        deployment-type: resource-optimized
+      annotations:
+        # Configuration for integrated service mesh without sidecar
+        service-mesh.io/circuit-breaker: "enabled"
+        service-mesh.io/retry-policy: "3"
+        service-mesh.io/timeout: "30s"
+        service-mesh.io/load-balancer: "round-robin"
+        service-mesh.io/health-check: "enabled"
+        service-mesh.io/metrics: "enabled"
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3001"
+        prometheus.io/path: "/api/metrics"
+        # Resource optimization annotations
+        container.apparmor.security.beta.kubernetes.io/nanopore-tracking-app: runtime/default
+        seccomp.security.alpha.kubernetes.io/pod: runtime/default
+    spec:
+      serviceAccountName: nanopore-tracking-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1003220000
+        fsGroup: 1003220000
+        supplementalGroups: [1003220000]
+      containers:
+      - name: nanopore-tracking-app
+        image: image-registry.openshift-image-registry.svc:5000/dept-barc/nanopore-tracking-app:latest
+        ports:
+        - containerPort: 3001
+          name: http
+          protocol: TCP
+        - containerPort: 8080
+          name: metrics
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3001"
+        - name: HOST
+          value: "0.0.0.0"
+        
+        # Database configuration
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: nanopore-secrets
+              key: database-url
+        
+        # Service mesh configuration
+        - name: SERVICE_MESH_ENABLED
+          value: "true"
+        - name: SERVICE_MESH_MODE
+          value: "integrated"
+        - name: CIRCUIT_BREAKER_ENABLED
+          value: "true"
+        - name: LOAD_BALANCER_STRATEGY
+          value: "round-robin"
+        - name: HEALTH_CHECK_INTERVAL
+          value: "30s"
+        - name: METRICS_ENABLED
+          value: "true"
+        
+        # AI service configuration
+        - name: OLLAMA_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: nanopore-config
+              key: ollama-host
+        
+        # Security configuration
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: nanopore-secrets
+              key: jwt-secret
+        - name: SESSION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: nanopore-secrets
+              key: session-secret
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: nanopore-secrets
+              key: encryption-key
+        
+        # Performance tuning
+        - name: NODE_OPTIONS
+          value: "--max-old-space-size=96"
+        - name: DB_POOL_MIN
+          value: "1"
+        - name: DB_POOL_MAX
+          value: "3"
+        - name: DB_CONNECTION_TIMEOUT
+          value: "5000"
+        - name: DB_IDLE_TIMEOUT
+          value: "20000"
+        
+        # Logging configuration
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: nanopore-config
+              key: log-level
+        
+        resources:
+          requests:
+            memory: "96Mi"
+            cpu: "50m"
+            ephemeral-storage: "200Mi"
+          limits:
+            memory: "192Mi"
+            cpu: "200m"
+            ephemeral-storage: "400Mi"
+        
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsUser: 1003220000
+          capabilities:
+            drop:
+            - ALL
+        
+        # Health checks
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+          successThreshold: 1
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+        
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 3001
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 12
+          successThreshold: 1
+        
+        # Volume mounts for persistent data
+        volumeMounts:
+        - name: uploads-storage
+          mountPath: /app/uploads
+        - name: app-data-storage
+          mountPath: /app/data
+        - name: tmp-storage
+          mountPath: /tmp
+        
+        # Lifecycle hooks
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - |
+                echo "Initiating graceful shutdown..."
+                # Send SIGTERM to Node.js process
+                kill -TERM 1
+                # Wait for graceful shutdown
+                sleep 10
+      
+      # Volumes
+      volumes:
+      - name: uploads-storage
+        persistentVolumeClaim:
+          claimName: nanopore-uploads-pvc
+      - name: app-data-storage
+        persistentVolumeClaim:
+          claimName: nanopore-app-data-pvc
+      - name: tmp-storage
+        emptyDir:
+          sizeLimit: "100Mi"
+      
+      # Pod scheduling
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - nanopore-tracking-app
+              topologyKey: kubernetes.io/hostname
+      
+      # Tolerations for node scheduling
+      tolerations:
+      - key: "node.kubernetes.io/memory-pressure"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "node.kubernetes.io/disk-pressure"
+        operator: "Exists"
+        effect: "NoSchedule"
+      
+      # DNS configuration
+      dnsPolicy: ClusterFirst
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+        - name: edns0
+      
+      # Termination grace period
+      terminationGracePeriodSeconds: 30
+      
+      # Restart policy
+      restartPolicy: Always
+
+---
+# PersistentVolumeClaim for uploads
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nanopore-uploads-pvc
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    component: storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi
+  storageClassName: "gp2"
+
+---
+# PersistentVolumeClaim for application data
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nanopore-data-pvc
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    component: storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi
+  storageClassName: "gp2"
+
+---
+# Enhanced ConfigMap with resource optimization settings
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nanopore-config-optimized
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    component: config
+data:
+  # Application configuration
+  app-name: "Nanopore Tracking App"
+  log-level: "info"
+  
+  # AI service configuration
+  ollama-host: "http://ollama-service:11434"
+  
+  # Performance tuning
+  node-options: "--max-old-space-size=96"
+  db-pool-min: "1"
+  db-pool-max: "3"
+  db-connection-timeout: "5000"
+  db-idle-timeout: "20000"
+  
+  # Service mesh configuration
+  service-mesh-enabled: "true"
+  service-mesh-mode: "integrated"
+  circuit-breaker-enabled: "true"
+  load-balancer-strategy: "round-robin"
+  health-check-interval: "30s"
+  metrics-enabled: "true"
+  
+  # Security configuration
+  security-hardening-enabled: "true"
+  
+  # Monitoring configuration
+  monitoring-enabled: "true"
+  metrics-port: "8080"
+  metrics-path: "/api/metrics"
+  
+  # Resource optimization
+  memory-optimization-enabled: "true"
+  gc-optimization-enabled: "true"
+  
+  # Application-specific settings
+  pdf-processing-timeout: "30000"
+  ai-processing-timeout: "60000"
+  upload-max-size: "10485760"  # 10MB
+  
+  # Cache configuration
+  cache-enabled: "true"
+  cache-ttl: "300"  # 5 minutes
+  cache-max-size: "100"  # 100 entries 

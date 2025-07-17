@@ -20,7 +20,32 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription
 } from '../ui/dialog'
+
+// Helper function to safely format dates
+const formatDate = (date: Date | string | null | undefined): string => {
+  if (!date) return 'Not available'
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date
+    return dateObj.toLocaleDateString()
+  } catch (error) {
+    return 'Invalid date'
+  }
+}
+
+const formatDateTime = (date: Date | string | null | undefined): { date: string; time: string } => {
+  if (!date) return { date: 'Not available', time: '' }
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date
+    return {
+      date: dateObj.toLocaleDateString(),
+      time: dateObj.toLocaleTimeString()
+    }
+  } catch (error) {
+    return { date: 'Invalid date', time: '' }
+  }
+}
 
 type NanoporeSample = {
   id: string
@@ -116,6 +141,9 @@ export function ViewTaskModal({
             <ExternalLink className="h-5 w-5" />
             Sample Details
           </DialogTitle>
+          <DialogDescription>
+            View detailed information and processing status for {sample.sampleName}.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
@@ -192,7 +220,7 @@ export function ViewTaskModal({
                 <div>
                   <p className="text-sm font-medium">Submitted</p>
                   <p className="text-sm text-muted-foreground">
-                    {sample.submittedAt.toLocaleDateString()}
+                    {formatDate(sample.submittedAt)}
                   </p>
                 </div>
               </div>
@@ -235,8 +263,10 @@ export function ViewTaskModal({
                 <div className="flex-1">
                   <p className="text-sm">
                     <span className="font-medium">Created:</span>{' '}
-                    {sample.createdAt.toLocaleDateString()} at{' '}
-                    {sample.createdAt.toLocaleTimeString()}
+                    {(() => {
+                      const { date, time } = formatDateTime(sample.createdAt)
+                      return time ? `${date} at ${time}` : date
+                    })()}
                   </p>
                 </div>
               </div>
@@ -245,8 +275,10 @@ export function ViewTaskModal({
                 <div className="flex-1">
                   <p className="text-sm">
                     <span className="font-medium">Last Updated:</span>{' '}
-                    {sample.updatedAt.toLocaleDateString()} at{' '}
-                    {sample.updatedAt.toLocaleTimeString()}
+                    {(() => {
+                      const { date, time } = formatDateTime(sample.updatedAt)
+                      return time ? `${date} at ${time}` : date
+                    })()}
                   </p>
                 </div>
               </div>

@@ -1,7 +1,7 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 
-import type { DB, NanoporeAttachment } from '@app/db/types'
+import type { DB, NanoporeAttachment } from '../../db/types'
 import type { Kysely } from 'kysely'
 import type { Selectable, Insertable } from 'kysely'
 
@@ -17,14 +17,9 @@ export interface FileUploadResult {
 
 export interface UploadFileInput {
   sampleId: string
-  file: {
-    name: string
-    type: string
-    size: number
-    arrayBuffer: ArrayBuffer
-  }
+  file: File
   description?: string
-  uploadedBy: string
+  uploadedBy?: string
 }
 
 /**
@@ -59,22 +54,23 @@ export async function uploadFileAttachment(
 
   try {
     // Save file to disk
-    const buffer = Buffer.from(input.file.arrayBuffer)
+    const buffer = Buffer.from(await input.file.arrayBuffer())
     await fs.writeFile(filePath, buffer)
 
     // Create database record
     const attachmentData: Insertable<NanoporeAttachment> = {
-      sampleId: input.sampleId,
-      fileName: input.file.name,
-      fileType: getFileExtension(input.file.name),
-      fileSizeBytes: BigInt(input.file.size),
-      filePath: filePath,
-      description: input.description,
-      uploadedBy: input.uploadedBy,
+      sample_id: input.sampleId,
+      file_name: input.file.name,
+      file_type: getFileExtension(input.file.name),
+      file_size_bytes: BigInt(input.file.size),
+      file_path: filePath,
+      description: input.description || null,
+      uploaded_by: input.uploadedBy || null,
+      uploaded_at: new Date().toISOString(),
     }
 
     const attachment = await db
-      .insertInto('nanoporeAttachments')
+      .insertInto('nanopore_attachments')
       .values(attachmentData)
       .returningAll()
       .executeTakeFirstOrThrow()
@@ -83,90 +79,76 @@ export async function uploadFileAttachment(
       attachment,
       filePath,
     }
-  } catch (_error) {
+  } catch (error) {
     // Clean up file if database operation fails
     try {
       await fs.unlink(filePath)
-    } catch (_unlinkError) {
+    } catch {
       // File might not exist or other error, but we don't need to handle it
     }
-    throw _error
+    throw error
   }
 }
 
 /**
- * Get all attachments for a nanopore sample
+ * Get file attachment by ID
  */
-export async function getSampleAttachments(
+export async function getFileAttachment(
   db: Kysely<DB>,
-  sampleId: string,
-): Promise<Selectable<NanoporeAttachment>[]> {
+  attachmentId: string,
+): Promise<Selectable<NanoporeAttachment> | null> {
   return await db
-    .selectFrom('nanoporeAttachments')
+    .selectFrom('nanopore_attachments')
     .selectAll()
-    .where('sampleId', '=', sampleId)
-    .orderBy('uploadedAt', 'desc')
-    .execute()
+    .where('id', '=', attachmentId)
+    .executeTakeFirst() || null
 }
 
 /**
- * Delete a file attachment
+ * Delete file attachment
  */
 export async function deleteFileAttachment(
   db: Kysely<DB>,
   attachmentId: string,
 ): Promise<void> {
-  // Get attachment info first
-  const attachment = await db
-    .selectFrom('nanoporeAttachments')
-    .selectAll()
-    .where('id', '=', attachmentId)
-    .executeTakeFirst()
-
-  if (!attachment) {
-    throw new Error('Attachment not found')
-  }
-
-  // Delete file from disk
-  try {
-    if (attachment.filePath) {
-      await fs.unlink(attachment.filePath)
+  // Get attachment to find file path
+  const attachment = await getFileAttachment(db, attachmentId)
+  
+  if (attachment && attachment.file_path) {
+    try {
+      await fs.unlink(attachment.file_path)
+    } catch {
+      // File might not exist, continue with database deletion
     }
-  } catch {
-    console.error('Failed to delete file from disk')
-    // Continue with database deletion even if file deletion fails
   }
 
-  // Delete database record
+  // Delete from database
   await db
-    .deleteFrom('nanoporeAttachments')
+    .deleteFrom('nanopore_attachments')
     .where('id', '=', attachmentId)
     .execute()
 }
 
 /**
- * Get file content for download
+ * Get all attachments for a sample
  */
-export async function getFileContent(
+export async function getSampleAttachments(
   db: Kysely<DB>,
-  attachmentId: string,
-): Promise<{ content: Buffer; attachment: Selectable<NanoporeAttachment> }> {
-  const attachment = await db
-    .selectFrom('nanoporeAttachments')
+  sampleId: string,
+): Promise<Array<Selectable<NanoporeAttachment>>> {
+  return await db
+    .selectFrom('nanopore_attachments')
     .selectAll()
-    .where('id', '=', attachmentId)
-    .executeTakeFirst()
+    .where('sample_id', '=', sampleId)
+    .orderBy('uploaded_at', 'desc')
+    .execute()
+}
 
-  if (!attachment || !attachment.filePath) {
-    throw new Error('Attachment not found')
-  }
-
-  try {
-    const content = await fs.readFile(attachment.filePath)
-    return { content, attachment }
-  } catch (_error) {
-    throw new Error('Failed to read file content')
-  }
+/**
+ * Read file content
+ */
+export async function readFileContent(filePath: string): Promise<Buffer> {
+  return await fs.readFile(filePath)
 }
 
 /**
@@ -174,25 +156,53 @@ export async function getFileContent(
  */
 async function ensureUploadDirectory(): Promise<void> {
   try {
-    await fs.access(UPLOAD_DIR)
-  } catch {
     await fs.mkdir(UPLOAD_DIR, { recursive: true })
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+      throw error
+    }
   }
 }
 
 /**
- * Sanitize filename for safe storage
+ * Sanitize filename to prevent path traversal
  */
 function sanitizeFileName(fileName: string): string {
-  return fileName
-    .replace(/[^\d.A-Za-z-]/g, '_')
-    .replace(/_+/g, '_')
-    .substring(0, 200) // Limit length
+  return fileName.replace(/[^a-zA-Z0-9.-]/g, '_')
 }
 
 /**
  * Get file extension from filename
  */
 function getFileExtension(fileName: string): string {
-  return path.extname(fileName).toLowerCase().substring(1)
+  const lastDot = fileName.lastIndexOf('.')
+  return lastDot > 0 ? fileName.substring(lastDot + 1).toLowerCase() : ''
+}
+
+/**
+ * Check if file exists
+ */
+export async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Get file stats
+ */
+export async function getFileStats(filePath: string): Promise<{
+  size: number
+  created: Date
+  modified: Date
+}> {
+  const stats = await fs.stat(filePath)
+  return {
+    size: stats.size,
+    created: stats.birthtime,
+    modified: stats.mtime,
+  }
 }

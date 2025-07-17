@@ -1,0 +1,390 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-mesh-integration
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    component: service-mesh
+data:
+  service-mesh-config.js: |
+    // Service mesh configuration for integration with existing app
+    const serviceMeshConfig = {
+      serviceName: 'nanopore-tracking-app',
+      namespace: 'dept-barc',
+      enableMutualTLS: false,
+      enableTracing: false,
+      enableMetrics: true,
+      retryPolicy: {
+        maxRetries: 2,
+        retryTimeout: 500,
+        retryBackoff: 'linear',
+        retryableStatusCodes: [502, 503, 504]
+      },
+      circuitBreaker: {
+        enabled: true,
+        failureThreshold: 0.7,
+        recoveryTimeout: 10000,
+        monitoringWindow: 30000
+      },
+      loadBalancing: {
+        algorithm: 'round_robin',
+        healthCheckEnabled: true,
+        healthCheckInterval: 30000,
+        healthCheckPath: '/health'
+      }
+    };
+    
+    module.exports = { serviceMeshConfig };
+    
+  service-mesh-middleware.js: |
+    // Service mesh middleware for Express integration
+    const { ServiceMeshProxy } = require('../lib/service-mesh/ServiceMesh');
+    const { serviceMeshConfig } = require('./service-mesh-config');
+    
+    let serviceMesh;
+    
+    // Initialize service mesh
+    function initializeServiceMesh() {
+      if (!serviceMesh) {
+        serviceMesh = new ServiceMeshProxy(serviceMeshConfig);
+        
+        // Register self in the service mesh
+        serviceMesh.registerService('nanopore-tracking-app', [{
+          id: 'self',
+          host: 'localhost',
+          port: 3001,
+          healthy: true,
+          weight: 100,
+          lastHealthCheck: new Date(),
+          responseTime: 0,
+          activeConnections: 0
+        }]);
+        
+        console.log('Service mesh initialized for nanopore-tracking-app');
+      }
+      return serviceMesh;
+    }
+    
+    // Express middleware
+    function serviceMeshMiddleware(req, res, next) {
+      const mesh = initializeServiceMesh();
+      
+      // Add service mesh headers
+      res.setHeader('x-service-mesh-enabled', 'true');
+      res.setHeader('x-service-name', 'nanopore-tracking-app');
+      res.setHeader('x-service-version', '1.0.0');
+      
+      // Add request context
+      req.serviceMesh = {
+        proxy: mesh,
+        requestId: req.headers['x-request-id'] || require('crypto').randomUUID(),
+        traceId: req.headers['x-trace-id'] || require('crypto').randomUUID(),
+        sourceService: req.headers['x-source-service'] || 'external'
+      };
+      
+      next();
+    }
+    
+    // Health check endpoint
+    function healthCheck(req, res) {
+      const mesh = initializeServiceMesh();
+      const stats = mesh.getStats();
+      
+      res.json({
+        status: 'healthy',
+        serviceMesh: {
+          enabled: true,
+          stats: stats
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Metrics endpoint
+    function metricsEndpoint(req, res) {
+      const mesh = initializeServiceMesh();
+      const metrics = mesh.getMetrics();
+      const stats = mesh.getStats();
+      
+      // Convert to Prometheus format
+      let prometheusMetrics = '';
+      
+      // Service mesh metrics
+      prometheusMetrics += `# HELP service_mesh_requests_total Total requests processed\n`;
+      prometheusMetrics += `# TYPE service_mesh_requests_total counter\n`;
+      prometheusMetrics += `service_mesh_requests_total{service="nanopore-tracking-app"} ${stats.totalEvents}\n`;
+      
+      prometheusMetrics += `# HELP service_mesh_failed_requests_total Total failed requests\n`;
+      prometheusMetrics += `# TYPE service_mesh_failed_requests_total counter\n`;
+      prometheusMetrics += `service_mesh_failed_requests_total{service="nanopore-tracking-app"} ${stats.failedEvents}\n`;
+      
+      prometheusMetrics += `# HELP service_mesh_avg_response_time_seconds Average response time\n`;
+      prometheusMetrics += `# TYPE service_mesh_avg_response_time_seconds gauge\n`;
+      prometheusMetrics += `service_mesh_avg_response_time_seconds{service="nanopore-tracking-app"} ${stats.averageProcessingTime / 1000}\n`;
+      
+      res.setHeader('Content-Type', 'text/plain');
+      res.send(prometheusMetrics);
+    }
+    
+    module.exports = {
+      initializeServiceMesh,
+      serviceMeshMiddleware,
+      healthCheck,
+      metricsEndpoint
+    };
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nanopore-tracking-app
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nanopore-tracking-app
+  template:
+    metadata:
+      labels:
+        app: nanopore-tracking-app
+      annotations:
+        service-mesh.enabled: "true"
+        service-mesh.version: "1.0.0"
+    spec:
+      serviceAccountName: nanopore-tracking-sa
+      containers:
+      - name: nanopore-tracking-app
+        image: image-registry.openshift-image-registry.svc:5000/dept-barc/nanopore-tracking-app:latest
+        ports:
+        - containerPort: 3001
+          name: http
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3001"
+        - name: HOST
+          value: "0.0.0.0"
+        - name: SERVICE_MESH_ENABLED
+          value: "true"
+        - name: SERVICE_MESH_CONFIG_PATH
+          value: "/app/config/service-mesh"
+        - name: ENABLE_METRICS
+          value: "true"
+        - name: METRICS_PORT
+          value: "9090"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: nanopore-secrets
+              key: database-url
+        - name: OLLAMA_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: nanopore-config
+              key: ollama-host
+        - name: BASE_URL
+          value: "https://nanopore-tracking-route-dept-barc.apps.cloudapps.unc.edu"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: nanopore-secrets
+              key: jwt-secret
+              optional: true
+        - name: SESSION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: nanopore-secrets
+              key: session-secret
+              optional: true
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: nanopore-secrets
+              key: encryption-key
+              optional: true
+        - name: ENABLE_AI_FEATURES
+          value: "true"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: UPLOAD_DIR
+          value: "/app/uploads"
+        - name: APP_DATA_DIR
+          value: "/app/data"
+        - name: CACHE_DIR
+          value: "/app/data/cache"
+        - name: LOG_DIR
+          value: "/app/data/logs"
+        - name: NODE_OPTIONS
+          value: "--expose-gc --max-old-space-size=256"
+        volumeMounts:
+        - name: uploads-storage
+          mountPath: /app/uploads
+        - name: temp-storage
+          mountPath: /tmp
+        - name: app-data-storage
+          mountPath: /app/data
+        - name: service-mesh-config
+          mountPath: /app/config/service-mesh
+          readOnly: true
+        resources:
+          requests:
+            memory: "160Mi"
+            cpu: "100m"
+          limits:
+            memory: "320Mi"
+            cpu: "300m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 20
+          periodSeconds: 15
+          failureThreshold: 5
+        securityContext:
+          runAsUser: 1003220000
+      initContainers:
+      - name: setup-storage
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          mkdir -p /app/data/cache /app/data/logs
+          ls -la /app/data
+          ls -la /app/uploads
+        volumeMounts:
+        - name: uploads-storage
+          mountPath: /app/uploads
+        - name: app-data-storage
+          mountPath: /app/data
+        securityContext:
+          runAsUser: 1003220000
+      volumes:
+      - name: uploads-storage
+        persistentVolumeClaim:
+          claimName: nanopore-uploads-pvc
+      - name: temp-storage
+        emptyDir:
+          sizeLimit: 1Gi
+      - name: app-data-storage
+        persistentVolumeClaim:
+          claimName: nanopore-app-data-pvc
+      - name: service-mesh-config
+        configMap:
+          name: service-mesh-integration
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-mesh-deployment-script
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    component: service-mesh
+data:
+  deploy-service-mesh.sh: |
+    #!/bin/bash
+    set -e
+    
+    echo "Deploying service mesh integration..."
+    
+    # Check quota before deployment
+    echo "Current quota usage:"
+    oc describe quota -n dept-barc
+    
+    # Apply service mesh integration
+    echo "Applying service mesh integration..."
+    oc apply -f deployment/openshift/service-mesh-integration.yaml
+    
+    # Wait for rollout to complete
+    echo "Waiting for deployment rollout..."
+    oc rollout status deployment/nanopore-tracking-app -n dept-barc --timeout=300s
+    
+    # Check deployment status
+    echo "Checking deployment status..."
+    oc get pods -l app=nanopore-tracking-app -n dept-barc
+    
+    # Test service mesh endpoints
+    echo "Testing service mesh endpoints..."
+    
+    # Get the route URL
+    ROUTE_URL=$(oc get route nanopore-tracking-route -n dept-barc -o jsonpath='{.spec.host}')
+    
+    echo "Testing health endpoint with service mesh..."
+    curl -s "https://$ROUTE_URL/health" | jq .
+    
+    echo "Testing metrics endpoint..."
+    curl -s "https://$ROUTE_URL/metrics" | head -20
+    
+    echo "Service mesh integration deployed successfully!"
+    
+  test-service-mesh.sh: |
+    #!/bin/bash
+    set -e
+    
+    echo "Testing service mesh functionality..."
+    
+    # Get the route URL
+    ROUTE_URL=$(oc get route nanopore-tracking-route -n dept-barc -o jsonpath='{.spec.host}')
+    
+    echo "Route URL: https://$ROUTE_URL"
+    
+    # Test health endpoint
+    echo "=== HEALTH CHECK ==="
+    curl -s "https://$ROUTE_URL/health" | jq .
+    
+    # Test metrics endpoint
+    echo "=== METRICS ==="
+    curl -s "https://$ROUTE_URL/metrics" | grep service_mesh
+    
+    # Test with service mesh headers
+    echo "=== SERVICE MESH HEADERS ==="
+    curl -s -H "x-request-id: test-123" -H "x-trace-id: trace-456" "https://$ROUTE_URL/health" | jq .
+    
+    # Check pod logs for service mesh initialization
+    echo "=== SERVICE MESH LOGS ==="
+    oc logs -l app=nanopore-tracking-app -n dept-barc --tail=50 | grep -i "service mesh"
+    
+    echo "Service mesh testing completed!"
+    
+  monitor-service-mesh.sh: |
+    #!/bin/bash
+    set -e
+    
+    echo "Monitoring service mesh..."
+    
+    while true; do
+      echo "=== $(date) ==="
+      
+      # Check pod status
+      echo "Pod status:"
+      oc get pods -l app=nanopore-tracking-app -n dept-barc
+      
+      # Check quota usage
+      echo "Quota usage:"
+      oc describe quota -n dept-barc | grep -A 3 "compute-resources"
+      
+      # Check service mesh metrics
+      ROUTE_URL=$(oc get route nanopore-tracking-route -n dept-barc -o jsonpath='{.spec.host}')
+      echo "Service mesh metrics:"
+      curl -s "https://$ROUTE_URL/metrics" | grep service_mesh | head -5
+      
+      echo "---"
+      sleep 30
+    done 

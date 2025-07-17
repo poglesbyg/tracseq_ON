@@ -1,0 +1,168 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nanopore-migration-job
+  labels:
+    app: nanopore-tracking-app
+spec:
+  template:
+    spec:
+      containers:
+      - name: migration
+        image: node:20-alpine
+        command: ["sh", "-c"]
+        args:
+        - |
+          apk add --no-cache postgresql-client
+          npm install -g pg
+          cat > /tmp/run-migrations.js << 'EOF'
+          #!/usr/bin/env node
+
+          const { Pool } = require('pg')
+          const fs = require('fs')
+          const path = require('path')
+
+          async function runMigrations() {
+            const databaseUrl = process.env.DATABASE_URL
+            
+            console.log('🔗 Connecting to database...')
+            const pool = new Pool({
+              connectionString: databaseUrl,
+            })
+
+            try {
+              // Test connection
+              await pool.query('SELECT NOW()')
+              console.log('✅ Database connection successful')
+
+              // Create users table first (referenced by nanopore_samples)
+              console.log('👤 Creating users table...')
+              await pool.query(`
+                CREATE TABLE IF NOT EXISTS users (
+                  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                  email VARCHAR(255) UNIQUE NOT NULL,
+                  name VARCHAR(255) NOT NULL,
+                  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                );
+              `)
+
+              // Insert demo user
+              await pool.query(`
+                INSERT INTO users (id, email, name) 
+                VALUES ('demo-user', 'demo@example.com', 'Demo User') 
+                ON CONFLICT (id) DO NOTHING;
+              `)
+
+              // Create timestamp trigger function
+              console.log('⏰ Creating timestamp trigger function...')
+              await pool.query(`
+                CREATE OR REPLACE FUNCTION trigger_set_timestamp()
+                RETURNS TRIGGER AS $$
+                BEGIN
+                  NEW.updated_at = NOW();
+                  RETURN NEW;
+                END;
+                $$ LANGUAGE plpgsql;
+              `)
+
+              // Run main migration
+              console.log('📄 Running main nanopore migration...')
+              await pool.query(`
+                -- Migration: Nanopore Sample Tracking Schema
+                -- Creates tables for Oxford Nanopore sequencing sample management
+
+                -- Nanopore samples table - main tracking entity
+                CREATE TABLE IF NOT EXISTS nanopore_samples (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    
+                    -- Basic sample information
+                    sample_name VARCHAR(255) NOT NULL,
+                    project_id VARCHAR(100), -- Service Project ID from iLab
+                    submitter_name VARCHAR(255) NOT NULL,
+                    submitter_email VARCHAR(255) NOT NULL,
+                    lab_name VARCHAR(255),
+                    
+                    -- Sample details
+                    sample_type VARCHAR(50) NOT NULL, -- DNA, RNA, etc.
+                    sample_buffer VARCHAR(100), -- Buffer type
+                    concentration DECIMAL(10,3), -- ng/μL
+                    volume DECIMAL(10,2), -- μL
+                    total_amount DECIMAL(10,3), -- ng (calculated)
+                    
+                    -- Flow cell selection
+                    flow_cell_type VARCHAR(50), -- R9.4.1, R10.4.1, etc.
+                    flow_cell_count INTEGER DEFAULT 1,
+                    
+                    -- Processing status
+                    status VARCHAR(20) DEFAULT 'submitted', -- submitted, prep, sequencing, analysis, completed, archived
+                    priority VARCHAR(10) DEFAULT 'normal', -- low, normal, high, urgent
+                    
+                    -- Assignment and tracking
+                    assigned_to VARCHAR(255), -- Staff member assigned
+                    library_prep_by VARCHAR(255), -- Grey, Stephanie, Jenny, etc.
+                    
+                    -- Timestamps
+                    submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    started_at TIMESTAMPTZ,
+                    completed_at TIMESTAMPTZ,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    
+                    -- User tracking
+                    created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    
+                    -- Constraints
+                    CONSTRAINT valid_status CHECK (status IN ('submitted', 'prep', 'sequencing', 'analysis', 'completed', 'archived')),
+                    CONSTRAINT valid_priority CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
+                    CONSTRAINT valid_concentration CHECK (concentration IS NULL OR concentration > 0),
+                    CONSTRAINT valid_volume CHECK (volume IS NULL OR volume > 0)
+                );
+              `)
+
+              // Add chart field
+              console.log('📄 Adding chart field...')
+              await pool.query(`
+                ALTER TABLE nanopore_samples 
+                ADD COLUMN IF NOT EXISTS chart_field VARCHAR(255) NOT NULL DEFAULT '';
+              `)
+
+              // Create indexes
+              console.log('📄 Creating indexes...')
+              await pool.query(`
+                CREATE INDEX IF NOT EXISTS idx_nanopore_samples_status ON nanopore_samples(status);
+                CREATE INDEX IF NOT EXISTS idx_nanopore_samples_priority ON nanopore_samples(priority);
+                CREATE INDEX IF NOT EXISTS idx_nanopore_samples_submitter ON nanopore_samples(submitter_email);
+                CREATE INDEX IF NOT EXISTS idx_nanopore_samples_created_at ON nanopore_samples(created_at);
+                CREATE INDEX IF NOT EXISTS idx_nanopore_samples_chart_field ON nanopore_samples(chart_field);
+              `)
+
+              // Create triggers
+              console.log('📄 Creating triggers...')
+              await pool.query(`
+                DROP TRIGGER IF EXISTS set_timestamp ON nanopore_samples;
+                CREATE TRIGGER set_timestamp BEFORE UPDATE ON nanopore_samples FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
+              `)
+
+              console.log('🎉 Database migrations completed successfully!')
+              
+            } catch (error) {
+              console.error('❌ Migration failed:', error)
+              process.exit(1)
+            } finally {
+              await pool.end()
+            }
+          }
+
+          runMigrations()
+          EOF
+          
+          node /tmp/run-migrations.js
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: nanopore-secrets
+              key: database-url
+      restartPolicy: Never
+  backoffLimit: 3 

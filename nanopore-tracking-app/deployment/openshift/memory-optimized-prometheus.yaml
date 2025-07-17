@@ -1,0 +1,282 @@
+---
+# Memory-Optimized Prometheus for Quota-Constrained Environment
+# Available memory in compute-resources quota: 1824Mi (4Gi - 2176Mi used)
+# This deployment uses minimal memory configuration
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-minimal
+  namespace: dept-barc
+  labels:
+    app: prometheus-minimal
+    component: monitoring
+    quota-optimized: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-minimal
+  template:
+    metadata:
+      labels:
+        app: prometheus-minimal
+        component: monitoring
+        quota-optimized: "true"
+    spec:
+      containers:
+      - name: prometheus
+        image: prom/prometheus:v2.40.0
+        ports:
+        - containerPort: 9090
+          name: web
+          protocol: TCP
+        args:
+          - '--config.file=/etc/prometheus/prometheus.yml'
+          - '--storage.tsdb.path=/prometheus/'
+          - '--web.console.libraries=/etc/prometheus/console_libraries'
+          - '--web.console.templates=/etc/prometheus/consoles'
+          - '--web.enable-lifecycle'
+          - '--web.external-url=/'
+          - '--storage.tsdb.retention.time=2h'  # Minimal retention for memory optimization
+          - '--storage.tsdb.retention.size=100MB'  # Limit storage size
+          - '--query.max-concurrency=2'  # Limit concurrent queries
+          - '--query.max-samples=10000'  # Limit sample processing
+          - '--web.max-connections=50'  # Limit connections
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"  # Minimal memory limit to fit in quota
+            cpu: "100m"
+        volumeMounts:
+        - name: prometheus-config
+          mountPath: /etc/prometheus
+        - name: prometheus-storage
+          mountPath: /prometheus
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 9090
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 9090
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      volumes:
+      - name: prometheus-config
+        configMap:
+          name: prometheus-minimal-config
+      - name: prometheus-storage
+        emptyDir:
+          sizeLimit: 100Mi  # Minimal storage for quota optimization
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+
+---
+# Minimal Prometheus Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-minimal-config
+  namespace: dept-barc
+  labels:
+    app: prometheus-minimal
+    component: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 30s  # Increased interval to reduce memory usage
+      evaluation_interval: 30s
+      external_labels:
+        cluster: 'dept-barc'
+        environment: 'quota-optimized'
+    
+    rule_files:
+      - "*.rules"
+    
+    scrape_configs:
+      # Scrape Prometheus itself
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+        scrape_interval: 60s  # Less frequent self-scraping
+      
+      # Scrape nanopore-tracking-app service mesh metrics
+      - job_name: 'nanopore-service-mesh'
+        static_configs:
+          - targets: ['nanopore-tracking-app:3001']
+        metrics_path: '/api/service-mesh/metrics'
+        scrape_interval: 30s
+        scrape_timeout: 10s
+        honor_labels: true
+        params:
+          format: ['prometheus']
+      
+      # Scrape nanopore-tracking-app health metrics
+      - job_name: 'nanopore-health'
+        static_configs:
+          - targets: ['nanopore-tracking-app:3001']
+        metrics_path: '/api/metrics'
+        scrape_interval: 60s
+        scrape_timeout: 10s
+        honor_labels: true
+      
+      # Minimal Kubernetes API server metrics (if accessible)
+      - job_name: 'kubernetes-apiservers'
+        kubernetes_sd_configs:
+          - role: endpoints
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+            action: keep
+            regex: default;kubernetes;https
+        scrape_interval: 60s
+        metric_relabel_configs:
+          # Keep only essential metrics to reduce memory usage
+          - source_labels: [__name__]
+            regex: 'apiserver_request_duration_seconds.*|apiserver_request_total|up'
+            action: keep
+
+  # Minimal alerting rules for quota monitoring
+  quota.rules: |
+    groups:
+    - name: quota-alerts
+      rules:
+      - alert: MemoryQuotaHigh
+        expr: (prometheus_tsdb_symbol_table_size_bytes / (128 * 1024 * 1024)) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus memory usage high"
+          description: "Prometheus is using {{ $value | humanizePercentage }} of allocated memory"
+      
+      - alert: ServiceMeshDown
+        expr: up{job="nanopore-service-mesh"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service mesh metrics unavailable"
+          description: "Cannot scrape service mesh metrics from nanopore-tracking-app"
+
+---
+# Service for Prometheus (reuse existing service if possible)
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-minimal
+  namespace: dept-barc
+  labels:
+    app: prometheus-minimal
+    component: monitoring
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9090
+    targetPort: 9090
+    protocol: TCP
+    name: web
+  selector:
+    app: prometheus-minimal
+
+---
+# ServiceMonitor for Prometheus to scrape itself
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: prometheus-minimal-monitor
+  namespace: dept-barc
+  labels:
+    app: prometheus-minimal
+    component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: prometheus-minimal
+  endpoints:
+  - port: web
+    interval: 30s
+    path: /metrics
+
+---
+# Network Policy for Prometheus
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: prometheus-minimal-policy
+  namespace: dept-barc
+spec:
+  podSelector:
+    matchLabels:
+      app: prometheus-minimal
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: dept-barc
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 9090
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: dept-barc
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 3001  # nanopore-tracking-app
+    - protocol: TCP
+      port: 9090  # self
+  - to: []  # Allow external traffic for Kubernetes API
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 6443
+
+---
+# Resource Quota Monitor for Prometheus
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: prometheus-quota-alerts
+  namespace: dept-barc
+spec:
+  groups:
+  - name: prometheus-quota
+    rules:
+    - alert: PrometheusMemoryHigh
+      expr: container_memory_working_set_bytes{pod=~"prometheus-minimal.*"} / (128 * 1024 * 1024) > 0.9
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Prometheus memory usage approaching limit"
+        description: "Prometheus pod {{ $labels.pod }} is using {{ $value | humanizePercentage }} of memory limit"
+    
+    - alert: PrometheusStorageHigh
+      expr: prometheus_tsdb_symbol_table_size_bytes / (100 * 1024 * 1024) > 0.8
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Prometheus storage usage high"
+        description: "Prometheus storage is {{ $value | humanizePercentage }} full" 

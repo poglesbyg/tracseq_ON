@@ -1,0 +1,122 @@
+---
+# Simplified Memory-Optimized Prometheus (No ServiceMonitor)
+# Memory limit: 128Mi to fit within quota constraints
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-minimal
+  namespace: dept-barc
+  labels:
+    app: prometheus-minimal
+    component: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-minimal
+  template:
+    metadata:
+      labels:
+        app: prometheus-minimal
+        component: monitoring
+    spec:
+      containers:
+      - name: prometheus
+        image: prom/prometheus:v2.40.0
+        ports:
+        - containerPort: 9090
+          name: web
+          protocol: TCP
+        args:
+          - '--config.file=/etc/prometheus/prometheus.yml'
+          - '--storage.tsdb.path=/prometheus/'
+          - '--web.enable-lifecycle'
+          - '--storage.tsdb.retention.time=2h'
+          - '--storage.tsdb.retention.size=100MB'
+          - '--query.max-concurrency=2'
+          - '--query.max-samples=10000'
+          - '--web.max-connections=50'
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        volumeMounts:
+        - name: prometheus-config
+          mountPath: /etc/prometheus
+        - name: prometheus-storage
+          mountPath: /prometheus
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 9090
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 9090
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: prometheus-config
+        configMap:
+          name: prometheus-minimal-config
+      - name: prometheus-storage
+        emptyDir:
+          sizeLimit: 100Mi
+
+---
+# Prometheus Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-minimal-config
+  namespace: dept-barc
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 30s
+      evaluation_interval: 30s
+    
+    scrape_configs:
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+        scrape_interval: 60s
+      
+      - job_name: 'nanopore-service-mesh'
+        static_configs:
+          - targets: ['nanopore-tracking-app:3001']
+        metrics_path: '/api/service-mesh/metrics'
+        scrape_interval: 30s
+        scrape_timeout: 10s
+      
+      - job_name: 'nanopore-health'
+        static_configs:
+          - targets: ['nanopore-tracking-app:3001']
+        metrics_path: '/api/metrics'
+        scrape_interval: 60s
+        scrape_timeout: 10s
+
+---
+# Service for Prometheus
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-minimal
+  namespace: dept-barc
+  labels:
+    app: prometheus-minimal
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9090
+    targetPort: 9090
+    protocol: TCP
+    name: web
+  selector:
+    app: prometheus-minimal 

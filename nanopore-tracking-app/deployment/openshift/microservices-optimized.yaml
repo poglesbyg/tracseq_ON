@@ -1,0 +1,302 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: microservices-config-optimized
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: microservices
+data:
+  microservices.yaml: |
+    eventBus:
+      enabled: true
+      type: in-memory
+      retryAttempts: 3
+      deadLetterQueue: true
+    
+    saga:
+      enabled: true
+      timeout: 300000
+      retryAttempts: 3
+      
+    databases:
+      sample:
+        host: sample-db
+        port: 5432
+        database: sample_db
+        pool:
+          min: 2
+          max: 5
+      ai:
+        host: ai-db
+        port: 5432
+        database: ai_db
+        pool:
+          min: 1
+          max: 3
+      audit:
+        host: audit-db
+        port: 5432
+        database: audit_db
+        pool:
+          min: 1
+          max: 3
+      backup:
+        host: backup-db
+        port: 5432
+        database: backup_db
+        pool:
+          min: 1
+          max: 2
+      config:
+        host: config-db
+        port: 5432
+        database: config_db
+        pool:
+          min: 1
+          max: 2
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sample-service-optimized
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: sample-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nanopore-tracking
+      component: sample-service
+  template:
+    metadata:
+      labels:
+        app: nanopore-tracking
+        component: sample-service
+    spec:
+      serviceAccountName: nanopore-tracking-sa
+      containers:
+      - name: sample-service
+        image: image-registry.openshift-image-registry.svc:5000/dept-barc/nanopore-tracking-app:latest
+        ports:
+        - containerPort: 3001
+          name: http
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: SERVICE_NAME
+          value: "sample-service"
+        - name: SERVICE_PORT
+          value: "3001"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: microservices-secrets
+              key: SAMPLE_DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: microservices-secrets
+              key: REDIS_URL
+        - name: EVENT_BUS_ENABLED
+          value: "true"
+        - name: SAGA_ENABLED
+          value: "true"
+        volumeMounts:
+        - name: microservices-config
+          mountPath: /app/config/microservices
+          readOnly: true
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: microservices-config
+        configMap:
+          name: microservices-config-optimized
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-service-optimized
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: ai-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nanopore-tracking
+      component: ai-service
+  template:
+    metadata:
+      labels:
+        app: nanopore-tracking
+        component: ai-service
+    spec:
+      serviceAccountName: nanopore-tracking-sa
+      containers:
+      - name: ai-service
+        image: image-registry.openshift-image-registry.svc:5000/dept-barc/nanopore-tracking-app:latest
+        ports:
+        - containerPort: 3002
+          name: http
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: SERVICE_NAME
+          value: "ai-service"
+        - name: SERVICE_PORT
+          value: "3002"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: microservices-secrets
+              key: AI_DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: microservices-secrets
+              key: REDIS_URL
+        - name: OLLAMA_HOST
+          value: "ollama:11434"
+        - name: EVENT_BUS_ENABLED
+          value: "true"
+        volumeMounts:
+        - name: microservices-config
+          mountPath: /app/config/microservices
+          readOnly: true
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3002
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: microservices-config
+        configMap:
+          name: microservices-config-optimized
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sample-service-optimized
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: sample-service
+spec:
+  selector:
+    app: nanopore-tracking
+    component: sample-service
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3001
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-service-optimized
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: ai-service
+spec:
+  selector:
+    app: nanopore-tracking
+    component: ai-service
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3002
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: sample-service-optimized-route
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: sample-service
+spec:
+  to:
+    kind: Service
+    name: sample-service-optimized
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: ai-service-optimized-route
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: ai-service
+spec:
+  to:
+    kind: Service
+    name: ai-service-optimized
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect 

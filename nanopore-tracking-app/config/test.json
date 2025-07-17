@@ -1,0 +1,74 @@
+{
+  "debug": false,
+  "server": {
+    "host": "localhost",
+    "port": 4322,
+    "session": {
+      "secure": false,
+      "maxAge": 300000
+    }
+  },
+  "security": {
+    "bcryptRounds": 6,
+    "csrfProtection": false,
+    "helmet": {
+      "contentSecurityPolicy": false,
+      "hsts": false,
+      "xssFilter": false
+    }
+  },
+  "monitoring": {
+    "enabled": false,
+    "alerting": {
+      "enabled": false
+    },
+    "logging": {
+      "level": "error",
+      "format": "text"
+    }
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "nanopore_tracking_test",
+    "username": "postgres",
+    "ssl": false,
+    "maxConnections": 2
+  },
+  "cache": {
+    "redis": {
+      "host": "localhost",
+      "port": 6379,
+      "database": 1
+    },
+    "ttl": {
+      "default": 60,
+      "session": 120,
+      "api": 30
+    }
+  },
+  "email": {
+    "smtp": {
+      "host": "localhost",
+      "port": 1025
+    },
+    "fromAddress": "test@nanopore-tracking.local"
+  },
+  "backup": {
+    "s3": {
+      "bucket": "nanopore-backups-test"
+    },
+    "retention": {
+      "days": 1,
+      "maxBackups": 5
+    }
+  },
+  "features": {
+    "pdfProcessing": false,
+    "aiExtraction": false,
+    "realTimeUpdates": false,
+    "auditLogging": false,
+    "memoryOptimization": false,
+    "backupRecovery": false
+  }
+} 

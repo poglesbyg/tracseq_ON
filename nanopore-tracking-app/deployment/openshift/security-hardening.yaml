@@ -1,0 +1,476 @@
+---
+# Security Context Constraints (SCC) for enhanced security
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: nanopore-tracking-scc
+  annotations:
+    kubernetes.io/description: "Security context constraints for nanopore tracking application"
+allowHostDirVolumePlugin: false
+allowHostIPC: false
+allowHostNetwork: false
+allowHostPID: false
+allowHostPorts: false
+allowPrivilegedContainer: false
+allowedCapabilities: []
+defaultAddCapabilities: []
+requiredDropCapabilities:
+- ALL
+allowedFlexVolumes: []
+allowedUnsafeSysctls: []
+forbiddenSysctls:
+- "*"
+fsGroup:
+  type: MustRunAs
+  ranges:
+  - min: 1000
+    max: 65535
+readOnlyRootFilesystem: true
+runAsUser:
+  type: MustRunAsNonRoot
+seLinuxContext:
+  type: MustRunAs
+supplementalGroups:
+  type: MustRunAs
+  ranges:
+  - min: 1000
+    max: 65535
+users:
+- system:serviceaccount:dept-barc:nanopore-tracking-sa
+volumes:
+- configMap
+- secret
+- emptyDir
+- persistentVolumeClaim
+- projected
+- downwardAPI
+---
+# Network Policy for micro-segmentation
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: nanopore-tracking-network-policy
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    security: network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: nanopore-tracking-app
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow ingress from OpenShift router
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: openshift-ingress
+    ports:
+    - protocol: TCP
+      port: 3001
+  # Allow ingress from Prometheus for metrics
+  - from:
+    - podSelector:
+        matchLabels:
+          app: prometheus
+    ports:
+    - protocol: TCP
+      port: 3001
+  # Allow ingress from same namespace pods
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: dept-barc
+    ports:
+    - protocol: TCP
+      port: 3001
+  egress:
+  # Allow egress to PostgreSQL
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgresql
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow egress to DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # Allow egress to HTTPS for external APIs
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+  # Allow egress to OpenShift API
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 6443
+---
+# Pod Security Policy (if available)
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: nanopore-tracking-psp
+  labels:
+    app: nanopore-tracking-app
+    security: pod-security-policy
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+  - ALL
+  volumes:
+  - 'configMap'
+  - 'secret'
+  - 'emptyDir'
+  - 'persistentVolumeClaim'
+  - 'projected'
+  - 'downwardAPI'
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  seLinux:
+    rule: 'RunAsAny'
+  fsGroup:
+    rule: 'MustRunAs'
+    ranges:
+    - min: 1000
+      max: 65535
+  readOnlyRootFilesystem: true
+---
+# Enhanced RBAC for service mesh security
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: nanopore-tracking-security-role
+  namespace: dept-barc
+rules:
+# Service mesh monitoring
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get", "list"]
+# Metrics access
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list"]
+# Network policy read access
+- apiGroups: ["networking.k8s.io"]
+  resources: ["networkpolicies"]
+  verbs: ["get", "list", "watch"]
+# Security context constraints read access
+- apiGroups: ["security.openshift.io"]
+  resources: ["securitycontextconstraints"]
+  verbs: ["get", "list"]
+  resourceNames: ["nanopore-tracking-scc"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: nanopore-tracking-security-binding
+  namespace: dept-barc
+subjects:
+- kind: ServiceAccount
+  name: nanopore-tracking-sa
+  namespace: dept-barc
+roleRef:
+  kind: Role
+  name: nanopore-tracking-security-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# Security monitoring ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nanopore-tracking-security-monitor
+rules:
+# Node metrics for security monitoring
+- apiGroups: [""]
+  resources: ["nodes", "nodes/metrics"]
+  verbs: ["get", "list", "watch"]
+# Network policy monitoring across namespaces
+- apiGroups: ["networking.k8s.io"]
+  resources: ["networkpolicies"]
+  verbs: ["get", "list", "watch"]
+# Security events monitoring
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch"]
+# Pod security policy monitoring
+- apiGroups: ["policy"]
+  resources: ["podsecuritypolicies"]
+  verbs: ["get", "list", "watch"]
+# Security context constraints monitoring
+- apiGroups: ["security.openshift.io"]
+  resources: ["securitycontextconstraints"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: nanopore-tracking-security-monitor-binding
+subjects:
+- kind: ServiceAccount
+  name: nanopore-tracking-sa
+  namespace: dept-barc
+roleRef:
+  kind: ClusterRole
+  name: nanopore-tracking-security-monitor
+  apiGroup: rbac.authorization.k8s.io
+---
+# Security configuration ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: security-hardening-config
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    component: security
+data:
+  security-policy.yaml: |
+    authentication:
+      enabled: true
+      tokenExpiration: 3600000  # 1 hour
+      refreshTokenExpiration: 86400000  # 24 hours
+      maxFailedAttempts: 5
+      lockoutDuration: 900000  # 15 minutes
+    authorization:
+      rbacEnabled: true
+      defaultRole: "user"
+      roleHierarchy:
+        admin: ["user", "moderator"]
+        moderator: ["user"]
+        user: []
+    encryption:
+      algorithm: "aes-256-gcm"
+      keySize: 32
+      rotationInterval: 86400000  # 24 hours
+    networkSecurity:
+      tlsEnabled: true
+      tlsVersion: "1.3"
+      allowedCiphers:
+        - "TLS_AES_256_GCM_SHA384"
+        - "TLS_CHACHA20_POLY1305_SHA256"
+        - "TLS_AES_128_GCM_SHA256"
+      certificateValidation: true
+    inputValidation:
+      sanitizeInput: true
+      maxRequestSize: 10485760  # 10MB
+      rateLimiting:
+        enabled: true
+        maxRequests: 100
+        windowMs: 60000  # 1 minute
+    audit:
+      enabled: true
+      logLevel: "info"
+      retentionDays: 30
+  threat-detection.yaml: |
+    detection:
+      sqlInjection:
+        enabled: true
+        severity: "high"
+        patterns:
+          - "\\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION)\\b"
+          - "\\b(OR|AND)\\s+\\d+\\s*=\\s*\\d+"
+          - "('|(\\\\')|(;)|(\\\\))"
+      xss:
+        enabled: true
+        severity: "medium"
+        patterns:
+          - "<script[^>]*>.*?</script>"
+          - "<iframe[^>]*>.*?</iframe>"
+          - "javascript:"
+          - "on\\w+\\s*="
+      bruteForce:
+        enabled: true
+        severity: "high"
+        thresholds:
+          maxAttempts: 5
+          timeWindow: 300000  # 5 minutes
+          lockoutDuration: 900000  # 15 minutes
+      ddos:
+        enabled: true
+        severity: "critical"
+        thresholds:
+          requestsPerSecond: 100
+          burstLimit: 200
+          timeWindow: 60000  # 1 minute
+    response:
+      blockMaliciousRequests: true
+      logSecurityEvents: true
+      alertOnCriticalThreats: true
+      autoBlacklistIPs: true
+      blacklistDuration: 3600000  # 1 hour
+---
+# Security secrets
+apiVersion: v1
+kind: Secret
+metadata:
+  name: security-keys
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    component: security
+type: Opaque
+data:
+  # These would be generated and rotated automatically
+  encryption-key: ""  # Base64 encoded encryption key
+  signing-key: ""     # Base64 encoded signing key
+  jwt-secret: ""      # Base64 encoded JWT secret
+---
+# Security monitoring ServiceMonitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nanopore-security-monitor
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    monitoring: security
+spec:
+  selector:
+    matchLabels:
+      app: nanopore-tracking-app
+  endpoints:
+  - port: http
+    path: /api/security/metrics
+    interval: 30s
+    scrapeTimeout: 15s
+    honorLabels: true
+  - port: http
+    path: /api/security/threats
+    interval: 60s
+    scrapeTimeout: 30s
+    honorLabels: true
+---
+# Security alerting rules
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: nanopore-security-alerts
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    monitoring: security
+spec:
+  groups:
+  - name: nanopore.security.rules
+    interval: 30s
+    rules:
+    # Authentication alerts
+    - alert: HighAuthenticationFailures
+      expr: rate(nanopore_auth_failures_total[5m]) > 5
+      for: 2m
+      labels:
+        severity: warning
+        component: authentication
+      annotations:
+        summary: "High authentication failure rate"
+        description: "Authentication failure rate is {{ $value }} per second"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/auth-failures"
+    
+    - alert: BruteForceAttack
+      expr: nanopore_failed_login_attempts > 10
+      for: 1m
+      labels:
+        severity: critical
+        component: security
+      annotations:
+        summary: "Brute force attack detected"
+        description: "{{ $value }} failed login attempts from same source"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/brute-force"
+    
+    # Authorization alerts
+    - alert: HighAuthorizationDenials
+      expr: rate(nanopore_authz_denials_total[5m]) > 2
+      for: 3m
+      labels:
+        severity: warning
+        component: authorization
+      annotations:
+        summary: "High authorization denial rate"
+        description: "Authorization denial rate is {{ $value }} per second"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/authz-denials"
+    
+    # Threat detection alerts
+    - alert: SQLInjectionAttempt
+      expr: nanopore_sql_injection_attempts_total > 0
+      for: 0s
+      labels:
+        severity: critical
+        component: security
+      annotations:
+        summary: "SQL injection attempt detected"
+        description: "{{ $value }} SQL injection attempts detected"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/sql-injection"
+    
+    - alert: XSSAttempt
+      expr: nanopore_xss_attempts_total > 0
+      for: 0s
+      labels:
+        severity: warning
+        component: security
+      annotations:
+        summary: "XSS attempt detected"
+        description: "{{ $value }} XSS attempts detected"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/xss"
+    
+    # Rate limiting alerts
+    - alert: RateLimitExceeded
+      expr: rate(nanopore_rate_limit_exceeded_total[5m]) > 10
+      for: 1m
+      labels:
+        severity: warning
+        component: rate-limiting
+      annotations:
+        summary: "Rate limit frequently exceeded"
+        description: "Rate limit exceeded {{ $value }} times per second"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/rate-limiting"
+    
+    # Encryption alerts
+    - alert: EncryptionKeyRotationDue
+      expr: nanopore_encryption_key_age_hours > 24
+      for: 0s
+      labels:
+        severity: warning
+        component: encryption
+      annotations:
+        summary: "Encryption key rotation due"
+        description: "Encryption key is {{ $value }} hours old"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/key-rotation"
+    
+    # Network security alerts
+    - alert: NetworkPolicyViolation
+      expr: nanopore_network_policy_violations_total > 0
+      for: 0s
+      labels:
+        severity: critical
+        component: network-security
+      annotations:
+        summary: "Network policy violation detected"
+        description: "{{ $value }} network policy violations detected"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/network-policy"
+    
+    # Security incident alerts
+    - alert: SecurityIncident
+      expr: nanopore_security_incidents_total > 0
+      for: 0s
+      labels:
+        severity: critical
+        component: security
+      annotations:
+        summary: "Security incident detected"
+        description: "{{ $value }} security incidents detected"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/security-incident" 

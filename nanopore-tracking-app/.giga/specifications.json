@@ -1,0 +1,22 @@
+[
+  {
+    "fileName": "main-overview.mdc",
+    "description": "Complete system overview covering the nanopore sequencing workflow architecture, core components, and integration points between AI processing and sample tracking"
+  },
+  {
+    "fileName": "nanopore-workflow-model.mdc",
+    "description": "Detailed documentation of the 8-step nanopore sequencing workflow model, including state transitions, validation rules, and processing requirements for each stage"
+  },
+  {
+    "fileName": "ai-extraction-algorithms.mdc",
+    "description": "Technical documentation of the AI-powered data extraction pipeline, including LLM processing, RAG enhancement, confidence scoring algorithms, and field validation rules"
+  },
+  {
+    "fileName": "data-flow-architecture.mdc",
+    "description": "Comprehensive documentation of data flow between components, covering sample submission, real-time status updates, PDF processing pipeline, and export transformations"
+  },
+  {
+    "fileName": "sample-tracking-model.mdc",
+    "description": "Detailed documentation of the sample tracking data model, status progression logic, priority system, and relationship with the processing workflow"
+  }
+]

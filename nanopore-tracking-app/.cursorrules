@@ -1,0 +1,132 @@
+
+# Nanopore Tracking Application - Development Guidelines
+
+## Tech Stack & Architecture
+
+### Core Technologies
+- **Frontend**: React 19, TypeScript, Astro 5.x
+- **Backend**: tRPC, PostgreSQL, Kysely ORM
+- **Styling**: Tailwind CSS, Radix UI components
+- **Authentication**: Better-auth
+- **AI Integration**: Ollama, RAG system
+- **Testing**: Vitest (unit), Playwright (e2e)
+- **Package Manager**: pnpm
+
+### Architecture Patterns
+- **Clean Architecture**: Separated concerns with repositories, services, and controllers
+- **Dependency Injection**: Container-based service registration
+- **Error Boundaries**: React error handling with graceful degradation
+- **Server-Side Rendering**: Astro-based SSR with React islands
+- **Type Safety**: Full TypeScript coverage with Zod validation
+
+## Development Guidelines
+
+### Code Quality Rules
+- Only modify code directly relevant to the specific request
+- Never use placeholders like `# ... rest of the processing ...` - always include complete code
+- Break problems into smaller steps and implement incrementally
+- Always provide a complete PLAN with REASONING before making changes
+- Add proper error handling and logging for debugging
+
+### File Structure Conventions
+```
+src/
+├── components/         # React components (UI + business logic)
+├── lib/               # Core utilities and services
+├── pages/             # Astro pages and API routes
+├── services/          # Business logic layer
+├── repositories/      # Data access layer
+├── middleware/        # Request/response processing
+└── hooks/            # Custom React hooks
+```
+
+## Core Business Logic Components (Priority: Critical)
+
+### 1. Sample Management System
+- **Location**: `src/lib/api/nanopore.ts`, `src/services/implementations/SampleService.ts`
+- **Features**: CRUD operations, status tracking, priority management
+- **Database**: PostgreSQL with Kysely ORM
+- **Validation**: Zod schemas for type safety
+
+### 2. AI-Enhanced PDF Processing
+- **Location**: `src/lib/ai/` directory
+- **Components**: 
+  - `nanopore-llm-service.ts` - LLM integration
+  - `pdf-text-extraction.ts` - PDF parsing
+  - `rag-system.ts` - Retrieval augmented generation
+- **Features**: Form data extraction, validation, confidence scoring
+
+### 3. Authentication & Security
+- **Location**: `src/lib/auth/`, `src/components/auth/`
+- **Provider**: Better-auth with admin-level access control
+- **Components**: Login forms, auth wrappers, session management
+
+## Key Integration Points (Priority: High)
+
+### 1. tRPC API Layer
+- **Location**: `src/lib/trpc.ts`, `src/pages/api/trpc/`
+- **Pattern**: Type-safe client-server communication
+- **Context**: Database injection, request validation
+- **Procedures**: Public procedures with Zod validation
+
+### 2. Database Layer
+- **Location**: `src/lib/database.ts`, `src/repositories/`
+- **ORM**: Kysely with PostgreSQL
+- **Pattern**: Repository pattern for data access
+- **Types**: Generated TypeScript types from schema
+
+### 3. Component Architecture
+- **Location**: `src/components/nanopore/`
+- **Pattern**: Compound components with shared state
+- **Key Components**:
+  - `nanopore-dashboard.tsx` - Main dashboard
+  - `pdf-upload.tsx` - File upload handling
+  - `export-modal.tsx` - Data export functionality
+
+## Development Workflows
+
+### Testing Strategy
+- **Unit Tests**: `pnpm test:unit` (Vitest)
+- **E2E Tests**: `pnpm test:e2e` (Playwright)
+- **Type Checking**: `pnpm lint` (TypeScript)
+- **Formatting**: `pnpm format` (Prettier)
+
+### Deployment Pipeline
+- **Development**: `pnpm dev` (port 3001)
+- **Build**: `pnpm build` (Astro build)
+- **Deploy**: OpenShift with Docker containers
+- **Scripts**: `scripts/deploy-openshift.sh`
+
+## Code Standards
+
+### TypeScript Best Practices
+- Use strict type checking with `noEmit`
+- Prefer interfaces over types for object shapes
+- Use Zod for runtime validation
+- Export types from dedicated type files
+
+### React Patterns
+- Use functional components with hooks
+- Implement error boundaries for critical sections
+- Use React Query for server state management
+- Follow compound component patterns for complex UI
+
+### Styling Guidelines
+- Use Tailwind utility classes
+- Implement consistent spacing (4px grid)
+- Use Radix UI for accessible components
+- Follow mobile-first responsive design
+
+## Security Considerations
+- Never expose database credentials in client code
+- Use environment variables for sensitive configuration
+- Implement proper input validation with Zod
+- Follow secure authentication patterns with Better-auth
+- Use HTTPS for all external communications
+
+## Performance Optimization
+- Implement code splitting for large components
+- Use React.memo for expensive computations
+- Optimize database queries with proper indexing
+- Implement caching strategies for static data
+- Monitor bundle size and loading performance

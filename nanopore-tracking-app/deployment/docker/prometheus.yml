@@ -1,0 +1,136 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # API Gateway
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:3001']
+    metrics_path: '/api/metrics'
+    scrape_interval: 10s
+
+  # Sample Management Service
+  - job_name: 'sample-management'
+    static_configs:
+      - targets: ['sample-management:3002']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # AI Processing Service
+  - job_name: 'ai-processing'
+    static_configs:
+      - targets: ['ai-processing:3003']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # Authentication Service
+  - job_name: 'authentication'
+    static_configs:
+      - targets: ['authentication:3004']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # File Storage Service
+  - job_name: 'file-storage'
+    static_configs:
+      - targets: ['file-storage:3005']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # Audit Service
+  - job_name: 'audit'
+    static_configs:
+      - targets: ['audit:3006']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # Service Discovery
+  - job_name: 'service-discovery'
+    static_configs:
+      - targets: ['api-gateway:3001']
+    metrics_path: '/api/discovery?action=metrics'
+    scrape_interval: 30s
+
+  # Database monitoring (if using postgres_exporter)
+  - job_name: 'postgres-sample'
+    static_configs:
+      - targets: ['sample-db:5432']
+    scrape_interval: 30s
+
+  - job_name: 'postgres-auth'
+    static_configs:
+      - targets: ['auth-db:5432']
+    scrape_interval: 30s
+
+  - job_name: 'postgres-audit'
+    static_configs:
+      - targets: ['audit-db:5432']
+    scrape_interval: 30s
+
+  # Redis monitoring
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+
+  # Vector Database (Qdrant)
+  - job_name: 'qdrant'
+    static_configs:
+      - targets: ['vector-db:6333']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Ollama LLM Service
+  - job_name: 'ollama'
+    static_configs:
+      - targets: ['ollama:11434']
+    metrics_path: '/api/metrics'
+    scrape_interval: 30s
+
+  # Node.js applications (if using prom-client)
+  - job_name: 'nodejs-apps'
+    static_configs:
+      - targets: 
+        - 'sample-management:3002'
+        - 'ai-processing:3003'
+        - 'authentication:3004'
+        - 'file-storage:3005'
+        - 'audit:3006'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # Health checks
+  - job_name: 'health-checks'
+    static_configs:
+      - targets: 
+        - 'api-gateway:3001'
+        - 'sample-management:3002'
+        - 'ai-processing:3003'
+        - 'authentication:3004'
+        - 'file-storage:3005'
+        - 'audit:3006'
+    metrics_path: '/health'
+    scrape_interval: 30s
+    scrape_timeout: 5s
+
+# Alerting rules (optional)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# Recording rules (optional)
+rule_files:
+  # - "recording_rules.yml"

@@ -1,0 +1,285 @@
+name: CI/CD Pipeline - OpenShift Deployment
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: image-registry.openshift-image-registry.svc:5000
+  NAMESPACE: dept-barc
+  APP_NAME: nanopore-tracking-app
+  NODE_VERSION: '20'
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: nanopore_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10.13.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run database setup
+        run: |
+          export DATABASE_URL="postgresql://postgres:testpass@localhost:5432/nanopore_test"
+          pnpm run db:setup
+        env:
+          NODE_ENV: test
+
+      - name: Run unit tests
+        run: pnpm run test:unit
+        env:
+          DATABASE_URL: postgresql://postgres:testpass@localhost:5432/nanopore_test
+          NODE_ENV: test
+
+      - name: Install Playwright browsers
+        run: pnpm dlx playwright install --with-deps
+
+      - name: Run Playwright tests
+        run: pnpm run test
+        env:
+          DATABASE_URL: postgresql://postgres:testpass@localhost:5432/nanopore_test
+          NODE_ENV: test
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10.13.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        run: pnpm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            dist/
+            package.json
+            pnpm-lock.yaml
+          retention-days: 7
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - name: Login to OpenShift
+        uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER_URL }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          namespace: ${{ env.NAMESPACE }}-staging
+
+      - name: Build and push image
+        run: |
+          # Create staging tag
+          TAG="staging-$(git rev-parse --short HEAD)"
+          
+          # Start binary build
+          oc start-build ${{ env.APP_NAME }} --from-dir=. --follow --wait
+          
+          # Tag the image for staging
+          oc tag ${{ env.APP_NAME }}:latest ${{ env.APP_NAME }}:$TAG
+
+      - name: Deploy to staging
+        run: |
+          # Update deployment with new image
+          oc set image deployment/${{ env.APP_NAME }} ${{ env.APP_NAME }}=${{ env.REGISTRY }}/${{ env.NAMESPACE }}-staging/${{ env.APP_NAME }}:staging-$(git rev-parse --short HEAD)
+          
+          # Wait for rollout to complete
+          oc rollout status deployment/${{ env.APP_NAME }} --timeout=300s
+
+      - name: Run smoke tests
+        run: |
+          # Get the route URL
+          ROUTE_URL=$(oc get route ${{ env.APP_NAME }}-route -o jsonpath='{.spec.host}')
+          
+          # Wait for application to be ready
+          sleep 30
+          
+          # Run basic health check
+          curl -f https://$ROUTE_URL/health || exit 1
+          
+          echo "Staging deployment successful: https://$ROUTE_URL"
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - name: Login to OpenShift
+        uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER_URL }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          namespace: ${{ env.NAMESPACE }}
+
+      - name: Build and push image
+        run: |
+          # Create production tag
+          TAG="v$(date +%Y%m%d-%H%M%S)"
+          
+          # Start binary build
+          oc start-build ${{ env.APP_NAME }} --from-dir=. --follow --wait
+          
+          # Tag the image for production
+          oc tag ${{ env.APP_NAME }}:latest ${{ env.APP_NAME }}:$TAG
+          oc tag ${{ env.APP_NAME }}:latest ${{ env.APP_NAME }}:stable
+
+      - name: Deploy to production
+        run: |
+          # Update deployment with new image
+          oc set image deployment/${{ env.APP_NAME }} ${{ env.APP_NAME }}=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.APP_NAME }}:v$(date +%Y%m%d-%H%M%S)
+          
+          # Wait for rollout to complete
+          oc rollout status deployment/${{ env.APP_NAME }} --timeout=300s
+
+      - name: Run production smoke tests
+        run: |
+          # Get the route URL
+          ROUTE_URL=$(oc get route ${{ env.APP_NAME }}-route -o jsonpath='{.spec.host}')
+          
+          # Wait for application to be ready
+          sleep 30
+          
+          # Run comprehensive health checks
+          curl -f https://$ROUTE_URL/health || exit 1
+          curl -f https://$ROUTE_URL/health/database || exit 1
+          curl -f https://$ROUTE_URL/health/ai || exit 1
+          
+          echo "Production deployment successful: https://$ROUTE_URL"
+
+      - name: Create GitHub release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v$(date +%Y%m%d-%H%M%S)
+          release_name: Release v$(date +%Y%m%d-%H%M%S)
+          body: |
+            Automated production deployment
+            
+            **Changes:**
+            - ${{ github.event.head_commit.message }}
+            
+            **Commit:** ${{ github.sha }}
+            **Deployed by:** ${{ github.actor }}
+          draft: false
+          prerelease: false
+
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    if: failure() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    needs: [deploy-staging, deploy-production]
+    
+    steps:
+      - name: Login to OpenShift
+        uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER_URL }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          namespace: ${{ env.NAMESPACE }}
+
+      - name: Rollback to previous version
+        run: |
+          echo "Rolling back to previous version..."
+          oc rollout undo deployment/${{ env.APP_NAME }}
+          oc rollout status deployment/${{ env.APP_NAME }} --timeout=300s
+          
+          echo "Rollback completed successfully"
+
+  notify:
+    name: Notify Teams
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, deploy-production]
+    if: always()
+    
+    steps:
+      - name: Notify deployment status
+        run: |
+          if [ "${{ needs.deploy-production.result }}" == "success" ]; then
+            echo "✅ Production deployment successful"
+          elif [ "${{ needs.deploy-staging.result }}" == "success" ]; then
+            echo "✅ Staging deployment successful"
+          else
+            echo "❌ Deployment failed"
+          fi 

@@ -1,0 +1,76 @@
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: nanopore-tracking-app
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    component: frontend
+  annotations:
+    haproxy.router.openshift.io/timeout: "300s"
+    haproxy.router.openshift.io/balance: "roundrobin"
+    router.openshift.io/cookie_name: "nanopore-session"
+spec:
+  host: nanopore-tracking-dept-barc.apps.cloudapps.unc.edu
+  to:
+    kind: Service
+    name: nanopore-tracking-service
+    weight: 100
+  port:
+    targetPort: 3001
+  path: /nanopore
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None
+
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: nanopore-metrics
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    component: metrics
+  annotations:
+    haproxy.router.openshift.io/timeout: "60s"
+spec:
+  host: nanopore-metrics-dept-barc.apps.cloudapps.unc.edu
+  to:
+    kind: Service
+    name: nanopore-metrics-service
+    weight: 100
+  port:
+    targetPort: 3001
+  path: /api/metrics
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None
+
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: nanopore-health
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    component: health
+  annotations:
+    haproxy.router.openshift.io/timeout: "30s"
+spec:
+  host: nanopore-health-dept-barc.apps.cloudapps.unc.edu
+  to:
+    kind: Service
+    name: nanopore-tracking-service
+    weight: 100
+  port:
+    targetPort: 3001
+  path: /health
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None 

@@ -1,0 +1,669 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: canary-deployment-config
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: canary-deployment
+data:
+  canary-config.yaml: |
+    canaryDeployment:
+      enabled: true
+      autoPromote: false
+      autoRollback: true
+      
+      # Default canary configuration
+      defaultConfig:
+        initialTrafficPercentage: 5
+        maxTrafficPercentage: 100
+        trafficIncrementPercentage: 10
+        evaluationInterval: 300  # 5 minutes
+        promotionDelay: 1800     # 30 minutes
+        rollbackDelay: 300       # 5 minutes
+        
+      # Success criteria for promotion
+      successCriteria:
+        errorRate: 0.01          # 1% max error rate
+        responseTime: 500        # 500ms max P95 response time
+        duration: 300            # 5 minutes observation window
+        minRequestCount: 100     # Minimum requests for valid metrics
+        
+      # Rollback criteria
+      rollbackCriteria:
+        errorRate: 0.05          # 5% error rate triggers rollback
+        responseTime: 1000       # 1000ms P95 response time triggers rollback
+        duration: 60             # 1 minute observation window
+        
+      # Monitoring configuration
+      monitoring:
+        metricsSource: prometheus
+        metricsNamespace: dept-barc
+        alertWebhook: ""
+        notificationChannels:
+          - type: email
+            address: admin@nanopore-tracking.com
+          - type: slack
+            webhook: ""
+            
+      # Traffic splitting strategies
+      trafficSplitting:
+        strategy: header_based    # header_based, percentage_based, canary_user
+        headerName: x-canary-user
+        headerValue: "true"
+        cookieName: canary-user
+        
+      # Analysis templates
+      analysisTemplates:
+        - name: success-rate
+          query: |
+            sum(rate(http_requests_total{job="{{.Service}}-{{.Version}}",code!~"5.."}[5m])) /
+            sum(rate(http_requests_total{job="{{.Service}}-{{.Version}}"}[5m])) * 100
+          successCondition: result[0] >= 99
+          failureCondition: result[0] < 95
+          
+        - name: response-time
+          query: |
+            histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="{{.Service}}-{{.Version}}"}[5m])) by (le)) * 1000
+          successCondition: result[0] <= 500
+          failureCondition: result[0] > 1000
+          
+        - name: error-rate
+          query: |
+            sum(rate(http_requests_total{job="{{.Service}}-{{.Version}}",code=~"5.."}[5m])) /
+            sum(rate(http_requests_total{job="{{.Service}}-{{.Version}}"}[5m])) * 100
+          successCondition: result[0] <= 1
+          failureCondition: result[0] > 5
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: sample-service-canary
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: sample-service
+spec:
+  replicas: 3
+  strategy:
+    canary:
+      canaryService: sample-service-canary
+      stableService: sample-service-stable
+      trafficRouting:
+        nginx:
+          stableIngress: sample-service-ingress
+          additionalIngressAnnotations:
+            canary-by-header: x-canary-user
+            canary-by-header-value: "true"
+      steps:
+      - setWeight: 5
+      - pause: {duration: 5m}
+      - setWeight: 10
+      - pause: {duration: 5m}
+      - setWeight: 20
+      - pause: {duration: 10m}
+      - setWeight: 50
+      - pause: {duration: 10m}
+      - setWeight: 100
+      analysis:
+        templates:
+        - templateName: success-rate
+        - templateName: response-time
+        - templateName: error-rate
+        args:
+        - name: service-name
+          value: sample-service
+        - name: canary-version
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['app.kubernetes.io/version']
+  selector:
+    matchLabels:
+      app: nanopore-tracking
+      component: sample-service
+  template:
+    metadata:
+      labels:
+        app: nanopore-tracking
+        component: sample-service
+    spec:
+      serviceAccountName: nanopore-tracking-sa
+      containers:
+      - name: sample-service
+        image: image-registry.openshift-image-registry.svc:5000/dept-barc/nanopore-tracking-app:latest
+        ports:
+        - containerPort: 3001
+          name: http
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: SERVICE_NAME
+          value: "sample-service"
+        - name: SERVICE_VERSION
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['app.kubernetes.io/version']
+        - name: CANARY_DEPLOYMENT
+          value: "true"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: microservices-secrets
+              key: SAMPLE_DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: microservices-secrets
+              key: REDIS_URL
+        volumeMounts:
+        - name: canary-config
+          mountPath: /app/config/canary
+          readOnly: true
+                 resources:
+           requests:
+             memory: "128Mi"
+             cpu: "100m"
+           limits:
+             memory: "256Mi"
+             cpu: "300m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3001
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: canary-config
+        configMap:
+          name: canary-deployment-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sample-service-stable
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: sample-service
+    version: stable
+spec:
+  selector:
+    app: nanopore-tracking
+    component: sample-service
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3001
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sample-service-canary
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: sample-service
+    version: canary
+spec:
+  selector:
+    app: nanopore-tracking
+    component: sample-service
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3001
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: success-rate
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: canary-analysis
+spec:
+  args:
+  - name: service-name
+  - name: canary-version
+  metrics:
+  - name: success-rate
+    interval: 30s
+    successCondition: result[0] >= 99
+    failureCondition: result[0] < 95
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          sum(rate(http_requests_total{job="{{.args.service-name}}-{{.args.canary-version}}",code!~"5.."}[5m])) /
+          sum(rate(http_requests_total{job="{{.args.service-name}}-{{.args.canary-version}}"}[5m])) * 100
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: response-time
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: canary-analysis
+spec:
+  args:
+  - name: service-name
+  - name: canary-version
+  metrics:
+  - name: response-time
+    interval: 30s
+    successCondition: result[0] <= 500
+    failureCondition: result[0] > 1000
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="{{.args.service-name}}-{{.args.canary-version}}"}[5m])) by (le)) * 1000
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: error-rate
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: canary-analysis
+spec:
+  args:
+  - name: service-name
+  - name: canary-version
+  metrics:
+  - name: error-rate
+    interval: 30s
+    successCondition: result[0] <= 1
+    failureCondition: result[0] > 5
+    provider:
+      prometheus:
+        address: http://prometheus:9090
+        query: |
+          sum(rate(http_requests_total{job="{{.args.service-name}}-{{.args.canary-version}}",code=~"5.."}[5m])) /
+          sum(rate(http_requests_total{job="{{.args.service-name}}-{{.args.canary-version}}"}[5m])) * 100
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sample-service-ingress
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: sample-service
+  annotations:
+    nginx.ingress.kubernetes.io/canary: "false"
+    nginx.ingress.kubernetes.io/canary-by-header: "x-canary-user"
+    nginx.ingress.kubernetes.io/canary-by-header-value: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: sample-service.dept-barc.apps.cloudapps.unc.edu
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: sample-service-stable
+            port:
+              number: 80
+  tls:
+  - hosts:
+    - sample-service.dept-barc.apps.cloudapps.unc.edu
+    secretName: sample-service-tls
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sample-service-canary-ingress
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: sample-service
+    version: canary
+  annotations:
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-by-header: "x-canary-user"
+    nginx.ingress.kubernetes.io/canary-by-header-value: "true"
+    nginx.ingress.kubernetes.io/canary-weight: "0"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: sample-service.dept-barc.apps.cloudapps.unc.edu
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: sample-service-canary
+            port:
+              number: 80
+  tls:
+  - hosts:
+    - sample-service.dept-barc.apps.cloudapps.unc.edu
+    secretName: sample-service-tls
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: canary-controller
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: canary-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nanopore-tracking
+      component: canary-controller
+  template:
+    metadata:
+      labels:
+        app: nanopore-tracking
+        component: canary-controller
+    spec:
+      serviceAccountName: nanopore-tracking-sa
+      containers:
+      - name: canary-controller
+        image: image-registry.openshift-image-registry.svc:5000/dept-barc/nanopore-tracking-app:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: CANARY_CONTROLLER_ENABLED
+          value: "true"
+        - name: PROMETHEUS_URL
+          value: "http://prometheus:9090"
+        - name: KUBERNETES_NAMESPACE
+          value: "dept-barc"
+        - name: LOG_LEVEL
+          value: "info"
+        volumeMounts:
+        - name: canary-config
+          mountPath: /app/config/canary
+          readOnly: true
+                 resources:
+           requests:
+             memory: "64Mi"
+             cpu: "50m"
+           limits:
+             memory: "128Mi"
+             cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: canary-config
+        configMap:
+          name: canary-deployment-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: canary-controller
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: canary-controller
+spec:
+  selector:
+    app: nanopore-tracking
+    component: canary-controller
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: ServiceMonitor
+metadata:
+  name: canary-deployment-monitor
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: canary-deployment
+spec:
+  selector:
+    matchLabels:
+      app: nanopore-tracking
+      component: canary-controller
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+    honorLabels: true
+  namespaceSelector:
+    matchNames:
+    - dept-barc
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: canary-deployment-alerts
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: canary-deployment
+spec:
+  groups:
+  - name: canary-deployment
+    rules:
+    - alert: CanaryDeploymentFailed
+      expr: canary_deployment_status{status="failed"} == 1
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Canary deployment failed"
+        description: "Canary deployment for service {{ $labels.service }} has failed"
+    
+    - alert: CanaryDeploymentHighErrorRate
+      expr: canary_deployment_error_rate > 0.05
+      for: 2m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High error rate in canary deployment"
+        description: "Canary deployment for service {{ $labels.service }} has error rate of {{ $value }}%"
+    
+    - alert: CanaryDeploymentHighLatency
+      expr: canary_deployment_response_time_p95 > 1000
+      for: 2m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High latency in canary deployment"
+        description: "Canary deployment for service {{ $labels.service }} has P95 latency of {{ $value }}ms"
+    
+    - alert: CanaryDeploymentRolledBack
+      expr: canary_deployment_status{status="rolled_back"} == 1
+      for: 1m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Canary deployment rolled back"
+        description: "Canary deployment for service {{ $labels.service }} has been rolled back"
+    
+    - alert: CanaryDeploymentStuck
+      expr: canary_deployment_duration_seconds > 3600
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Canary deployment taking too long"
+        description: "Canary deployment for service {{ $labels.service }} has been running for {{ $value }} seconds"
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: canary-controller-role
+  labels:
+    app: nanopore-tracking
+    component: canary-controller
+rules:
+- apiGroups: [""]
+  resources: ["services", "endpoints", "pods"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["argoproj.io"]
+  resources: ["rollouts", "analysistemplates", "analysisruns"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["monitoring.coreos.com"]
+  resources: ["servicemonitors", "prometheusrules"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: canary-controller-binding
+  labels:
+    app: nanopore-tracking
+    component: canary-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: canary-controller-role
+subjects:
+- kind: ServiceAccount
+  name: nanopore-tracking-sa
+  namespace: dept-barc
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: canary-deployment-scripts
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking
+    component: canary-deployment
+data:
+  deploy-canary.sh: |
+    #!/bin/bash
+    set -e
+    
+    SERVICE_NAME=${1:-sample-service}
+    NEW_VERSION=${2:-latest}
+    TRAFFIC_PERCENTAGE=${3:-5}
+    
+    echo "Starting canary deployment for $SERVICE_NAME with version $NEW_VERSION"
+    
+    # Update the rollout with new image
+    kubectl patch rollout $SERVICE_NAME-canary -n dept-barc --type='merge' -p="{\"spec\":{\"template\":{\"spec\":{\"containers\":[{\"name\":\"$SERVICE_NAME\",\"image\":\"image-registry.openshift-image-registry.svc:5000/dept-barc/nanopore-tracking-app:$NEW_VERSION\"}]}}}}"
+    
+    # Set initial traffic percentage
+    kubectl argo rollouts set image $SERVICE_NAME-canary $SERVICE_NAME=image-registry.openshift-image-registry.svc:5000/dept-barc/nanopore-tracking-app:$NEW_VERSION -n dept-barc
+    
+    # Start the rollout
+    kubectl argo rollouts promote $SERVICE_NAME-canary -n dept-barc
+    
+    echo "Canary deployment started successfully"
+  
+  promote-canary.sh: |
+    #!/bin/bash
+    set -e
+    
+    SERVICE_NAME=${1:-sample-service}
+    
+    echo "Promoting canary deployment for $SERVICE_NAME"
+    
+    # Promote the canary to next step
+    kubectl argo rollouts promote $SERVICE_NAME-canary -n dept-barc
+    
+    echo "Canary deployment promoted successfully"
+  
+  rollback-canary.sh: |
+    #!/bin/bash
+    set -e
+    
+    SERVICE_NAME=${1:-sample-service}
+    
+    echo "Rolling back canary deployment for $SERVICE_NAME"
+    
+    # Abort the rollout
+    kubectl argo rollouts abort $SERVICE_NAME-canary -n dept-barc
+    
+    # Rollback to previous version
+    kubectl argo rollouts undo $SERVICE_NAME-canary -n dept-barc
+    
+    echo "Canary deployment rolled back successfully"
+  
+  check-canary-status.sh: |
+    #!/bin/bash
+    set -e
+    
+    SERVICE_NAME=${1:-sample-service}
+    
+    echo "Checking canary deployment status for $SERVICE_NAME"
+    
+    # Get rollout status
+    kubectl argo rollouts get rollout $SERVICE_NAME-canary -n dept-barc
+    
+    # Get analysis status
+    kubectl get analysisruns -l rollout=$SERVICE_NAME-canary -n dept-barc
+    
+    # Get metrics
+    kubectl get servicemonitors -l component=canary-deployment -n dept-barc 

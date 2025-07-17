@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { Calendar, Download, FileText, Database } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
-
-import { trpc } from '@/client/trpc'
+import { apiClient } from '@/lib/api-client'
 import { Button } from '../ui/button'
 import {
   Dialog,
@@ -22,7 +21,7 @@ interface ExportModalProps {
 export function ExportModal({ isOpen, onClose }: ExportModalProps) {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const [format, setFormat] = useState<'csv' | 'json'>('csv')
+  const [exportFormat, setExportFormat] = useState<'csv' | 'json'>('csv')
   const [includeAllUsers, setIncludeAllUsers] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
 
@@ -43,10 +42,10 @@ export function ExportModal({ isOpen, onClose }: ExportModalProps) {
     setIsExporting(true)
 
     try {
-      const result = await trpc.nanopore.export.query({
+      const result = await apiClient.exportSamples({
         startDate: start,
         endDate: end,
-        format,
+        format: exportFormat,
         includeAllUsers,
       })
 
@@ -79,7 +78,7 @@ export function ExportModal({ isOpen, onClose }: ExportModalProps) {
   const handleReset = () => {
     setStartDate('')
     setEndDate('')
-    setFormat('csv')
+    setExportFormat('csv')
     setIncludeAllUsers(false)
   }
 
@@ -135,8 +134,8 @@ export function ExportModal({ isOpen, onClose }: ExportModalProps) {
                   id="csv"
                   name="format"
                   value="csv"
-                  checked={format === 'csv'}
-                  onChange={(e) => setFormat(e.target.value as 'csv' | 'json')}
+                  checked={exportFormat === 'csv'}
+                  onChange={(e) => setExportFormat(e.target.value as 'csv' | 'json')}
                   className="w-4 h-4"
                 />
                 <label htmlFor="csv" className="flex items-center gap-2 text-sm">
@@ -150,8 +149,8 @@ export function ExportModal({ isOpen, onClose }: ExportModalProps) {
                   id="json"
                   name="format"
                   value="json"
-                  checked={format === 'json'}
-                  onChange={(e) => setFormat(e.target.value as 'csv' | 'json')}
+                  checked={exportFormat === 'json'}
+                  onChange={(e) => setExportFormat(e.target.value as 'csv' | 'json')}
                   className="w-4 h-4"
                 />
                 <label htmlFor="json" className="flex items-center gap-2 text-sm">
@@ -182,7 +181,7 @@ export function ExportModal({ isOpen, onClose }: ExportModalProps) {
               <p className="font-medium text-foreground">Export Preview:</p>
               <div className="mt-1 text-muted-foreground">
                 <p>Date Range: {format(new Date(startDate), 'MMM d, yyyy')} to {format(new Date(endDate), 'MMM d, yyyy')}</p>
-                <p>Format: {format.toUpperCase()}</p>
+                <p>Format: {exportFormat.toUpperCase()}</p>
                 <p>Scope: {includeAllUsers ? 'All users' : 'Your samples only'}</p>
               </div>
             </div>

@@ -1,0 +1,264 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: nanopore-tracking-app-webhook
+  labels:
+    app: nanopore-tracking-app
+spec:
+  runPolicy: Serial
+  source:
+    type: Git
+    git:
+      uri: https://github.com/your-org/nanopore-tracking-app.git
+      ref: main
+    contextDir: "."
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: deployment/docker/Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: nanopore-tracking-app:latest
+  triggers:
+  - type: ConfigChange
+  - type: GitHub
+    github:
+      secretReference:
+        name: github-webhook-secret
+  - type: Generic
+    generic:
+      secretReference:
+        name: generic-webhook-secret
+  postCommit:
+    script: |
+      echo "Build completed successfully"
+      echo "Image: $OPENSHIFT_BUILD_NAME"
+      echo "Commit: $OPENSHIFT_BUILD_COMMIT"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-webhook-secret
+type: Opaque
+stringData:
+  WebHookSecretKey: "your-github-webhook-secret-key"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: generic-webhook-secret
+type: Opaque
+stringData:
+  WebHookSecretKey: "your-generic-webhook-secret-key"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nanopore-tracking-app-cd
+  labels:
+    app: nanopore-tracking-app
+    deployment-type: continuous
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nanopore-tracking-app
+      deployment-type: continuous
+  template:
+    metadata:
+      labels:
+        app: nanopore-tracking-app
+        deployment-type: continuous
+    spec:
+      containers:
+      - name: nanopore-tracking-app
+        image: image-registry.openshift-image-registry.svc:5000/dept-barc/nanopore-tracking-app:latest
+        ports:
+        - containerPort: 3001
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: nanopore-secrets
+              key: database-url
+        - name: OLLAMA_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: nanopore-config
+              key: ollama-host
+        - name: DEPLOYMENT_TYPE
+          value: "continuous"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+      imagePullPolicy: Always
+      restartPolicy: Always
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: nanopore-tracking-app
+  labels:
+    app: nanopore-tracking-app
+spec:
+  lookupPolicy:
+    local: false
+  tags:
+  - name: latest
+    from:
+      kind: DockerImage
+      name: nanopore-tracking-app:latest
+    importPolicy:
+      scheduled: true
+    referencePolicy:
+      type: Source
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nanopore-tracking-service-cd
+  labels:
+    app: nanopore-tracking-app
+    deployment-type: continuous
+spec:
+  selector:
+    app: nanopore-tracking-app
+    deployment-type: continuous
+  ports:
+  - protocol: TCP
+    port: 3001
+    targetPort: 3001
+  type: ClusterIP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: nanopore-tracking-route-cd
+  labels:
+    app: nanopore-tracking-app
+    deployment-type: continuous
+spec:
+  to:
+    kind: Service
+    name: nanopore-tracking-service-cd
+  port:
+    targetPort: 3001
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: nanopore-deployment-trigger
+spec:
+  params:
+  - name: git-revision
+    description: The git revision
+  - name: git-commit-message
+    description: The git commit message
+  - name: git-repo-url
+    description: The git repository url
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1beta1
+    kind: PipelineRun
+    metadata:
+      generateName: nanopore-deploy-
+    spec:
+      pipelineRef:
+        name: nanopore-deployment-pipeline
+      params:
+      - name: git-url
+        value: $(tt.params.git-repo-url)
+      - name: git-revision
+        value: $(tt.params.git-revision)
+      - name: image-name
+        value: nanopore-tracking-app
+      - name: deployment-name
+        value: nanopore-tracking-app-cd
+      workspaces:
+      - name: shared-data
+        volumeClaimTemplate:
+          spec:
+            accessModes:
+            - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: nanopore-github-binding
+spec:
+  params:
+  - name: git-repo-url
+    value: $(body.repository.clone_url)
+  - name: git-revision
+    value: $(body.head_commit.id)
+  - name: git-commit-message
+    value: $(body.head_commit.message)
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: nanopore-github-listener
+spec:
+  serviceAccountName: pipeline
+  triggers:
+  - name: github-trigger
+    bindings:
+    - ref: nanopore-github-binding
+    template:
+      ref: nanopore-deployment-trigger
+    interceptors:
+    - ref:
+        name: github
+      params:
+      - name: secretRef
+        value:
+          secretName: github-webhook-secret
+          secretKey: WebHookSecretKey
+      - name: eventTypes
+        value: ["push"]
+    - ref:
+        name: cel
+      params:
+      - name: filter
+        value: body.ref == 'refs/heads/main' 

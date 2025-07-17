@@ -1,0 +1,37 @@
+---
+# Enhanced PersistentVolumeClaim for uploads (reuse existing if possible)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nanopore-uploads-pvc
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    component: storage
+    deployment-type: enhanced
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: "snap"
+
+---
+# Enhanced PersistentVolumeClaim for application data (reuse existing if possible)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nanopore-app-data-pvc
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    component: storage
+    deployment-type: enhanced
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: "snap" 

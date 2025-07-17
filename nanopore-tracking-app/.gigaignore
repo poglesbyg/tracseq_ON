@@ -1,0 +1,118 @@
+# Dependencies and package manager files
+node_modules/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Build outputs and generated files
+dist/
+build/
+out/
+.astro/
+*.tsbuildinfo
+
+# Environment and configuration files
+.env*
+secrets/
+config/local.json
+config/production.json
+
+# Database files and backups
+*.db
+*.sqlite
+*.sqlite3
+*.sql.backup
+*.dump
+*.backup
+*.bak
+backups/
+migration-backups/
+
+# Logs and debugging
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Testing artifacts
+test-results/
+playwright-report/
+coverage/
+.nyc_output/
+playwright/.cache/
+
+# AI models and large binary files
+*.model
+*.bin
+*.onnx
+models/
+embeddings/
+vector-store/
+
+# Docker and containerization
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Kubernetes and OpenShift
+deployment/
+*.yaml
+*.yml
+
+# Monitoring and metrics
+prometheus-data/
+grafana-data/
+metrics/
+*.prof
+*.cpuprofile
+*.heapprofile
+
+# PDF processing temporary files
+pdf-temp/
+extracted-text/
+uploads/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+
+# Cache directories
+.cache/
+.parcel-cache/
+.npm/
+.eslintcache
+
+# Service mesh certificates
+*.crt
+*.key
+*.pem
+ca-certificates/
+
+# Documentation that might be auto-generated
+docs/api/
+docs/generated/
+
+# Large data files
+*.tar
+*.gz
+*.zip
+*.7z
+
+# Migration scripts (focus on current schema)
+migrations/
+database/migrations/
+
+# Backup SQL files
+*.sql.gz 

@@ -1,0 +1,91 @@
+﻿kind: ResourceQuota
+apiVersion: v1
+metadata:
+  name: default-quota
+  namespace: dept-barc
+  uid: 2f9e8f52-6686-4252-a3a9-e8a3517fd1d5
+  resourceVersion: '2901991113'
+  creationTimestamp: '2021-05-04T14:11:01Z'
+  managedFields:
+    - manager: openshift-apiserver
+      operation: Update
+      apiVersion: v1
+      time: '2021-05-04T14:11:01Z'
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:spec':
+          'f:hard':
+            'f:pods': {}
+            'f:requests.storage': {}
+            'f:limits.ephemeral-storage': {}
+            .: {}
+            'f:secrets': {}
+            'f:services': {}
+            'f:requests.ephemeral-storage': {}
+            'f:persistentvolumeclaims': {}
+            'f:replicationcontrollers': {}
+    - manager: kube-controller-manager
+      operation: Update
+      apiVersion: v1
+      time: '2022-03-09T15:13:23Z'
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:status':
+          'f:hard':
+            'f:pods': {}
+            'f:requests.storage': {}
+            'f:limits.ephemeral-storage': {}
+            .: {}
+            'f:secrets': {}
+            'f:services': {}
+            'f:requests.ephemeral-storage': {}
+            'f:persistentvolumeclaims': {}
+            'f:replicationcontrollers': {}
+          'f:used':
+            .: {}
+            'f:limits.ephemeral-storage': {}
+            'f:replicationcontrollers': {}
+            'f:requests.ephemeral-storage': {}
+    - manager: kube-apiserver
+      operation: Update
+      apiVersion: v1
+      time: '2025-07-16T20:56:59Z'
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:status':
+          'f:used':
+            'f:persistentvolumeclaims': {}
+            'f:pods': {}
+            'f:requests.storage': {}
+            'f:secrets': {}
+            'f:services': {}
+      subresource: status
+spec:
+  hard:
+    limits.ephemeral-storage: 4Gi
+    persistentvolumeclaims: '10'
+    pods: '10'
+    replicationcontrollers: '100'
+    requests.ephemeral-storage: 2Gi
+    requests.storage: 5Gi
+    secrets: '50'
+    services: '10'
+status:
+  hard:
+    limits.ephemeral-storage: 4Gi
+    persistentvolumeclaims: '10'
+    pods: '10'
+    replicationcontrollers: '100'
+    requests.ephemeral-storage: 2Gi
+    requests.storage: 5Gi
+    secrets: '50'
+    services: '10'
+  used:
+    limits.ephemeral-storage: '0'
+    persistentvolumeclaims: '3'
+    pods: '9'
+    replicationcontrollers: '0'
+    requests.ephemeral-storage: '0'
+    requests.storage: 4Gi
+    secrets: '21'
+    services: '10'

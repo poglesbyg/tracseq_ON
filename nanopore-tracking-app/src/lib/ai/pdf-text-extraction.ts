@@ -1,3 +1,14 @@
+// PDF worker configuration removed for lightweight version
+import { withPdfRetry, createPdfError, PdfErrorType } from '../pdf-error-handler'
+import { pdfPatternMatcher } from '../pdf-pattern-matcher'
+import { 
+  PdfProgressTracker, 
+  ProcessingStep, 
+  DEFAULT_PROCESSING_STEPS,
+  PATTERN_ONLY_STEPS,
+  type ProgressCallback 
+} from '../pdf-progress-tracker'
+
 export interface ExtractedPdfData {
   rawText: string
   pageCount: number
@@ -17,6 +28,7 @@ export interface ExtractedPdfData {
     labName?: string
     projectName?: string
     sequencingType?: string
+    sampleType?: string
     libraryType?: string
     flowCellType?: string
     priority?: string
@@ -30,315 +42,304 @@ export interface PdfExtractionResult {
   error?: string
 }
 
+export interface PdfExtractionOptions {
+  onProgress?: ProgressCallback
+  useAI?: boolean
+  useRAG?: boolean
+}
+
 class PdfTextExtractionService {
   private pdfParseModule: any = null
-  private isInitialized = false
-  private initializationError: string | null = null
+  private isServerSideInitialized = false
+  private isServerSide = typeof window === 'undefined'
 
   /**
-   * Initialize the PDF parse module with error handling
+   * Helper function to build metadata object with proper typing
    */
-  private async initializePdfParse(): Promise<boolean> {
-    if (this.isInitialized) {
-      return this.pdfParseModule !== null
-    }
-
-    try {
-      // Check if we're in browser environment
-      if (typeof window !== 'undefined') {
-        this.initializationError =
-          'PDF parsing is not available in browser environment'
-        this.isInitialized = true
-        return false
-      }
-
-      // Use dynamic import with error handling
-      const pdfModule = await import('pdf-parse')
-      this.pdfParseModule = pdfModule.default || pdfModule
-      this.isInitialized = true
-      return true
-    } catch (error) {
-      this.initializationError =
-        error instanceof Error ? error.message : 'Failed to load PDF parser'
-      this.isInitialized = true
-      console.error('Failed to initialize PDF parser:', error)
-      return false
-    }
+  private buildMetadata(info: any): ExtractedPdfData['metadata'] {
+    const metadata: ExtractedPdfData['metadata'] = {}
+    
+    if (info?.Title) metadata.title = info.Title
+    if (info?.Author) metadata.author = info.Author
+    if (info?.Subject) metadata.subject = info.Subject
+    if (info?.Creator) metadata.creator = info.Creator
+    if (info?.Producer) metadata.producer = info.Producer
+    if (info?.CreationDate) metadata.creationDate = new Date(info.CreationDate)
+    if (info?.ModDate) metadata.modificationDate = new Date(info.ModDate)
+    
+    return metadata
   }
 
   /**
-   * Extract text and metadata from a PDF file
+   * Initialize PDF parsing modules - using multiple fallback approaches
    */
-  async extractText(file: File): Promise<PdfExtractionResult> {
-    try {
-      // Initialize PDF parser
-      const isReady = await this.initializePdfParse()
-      if (!isReady) {
-        return {
-          success: false,
-          error: this.initializationError || 'PDF parser not available',
+  private async initializePdfParsers(): Promise<{ server: boolean }> {
+    const results = { server: false }
+
+    // Only try server-side initialization with pdf-parse
+    if (this.isServerSide && !this.isServerSideInitialized) {
+      console.log('Attempting PDF parsing initialization...')
+      
+      // Method 1: Try direct require first (most reliable in Node.js)
+      try {
+        // Use eval to avoid bundler issues
+        const requireFunc = eval('require')
+        this.pdfParseModule = requireFunc('pdf-parse')
+        this.isServerSideInitialized = true
+        results.server = true
+        console.log('✅ PDF parsing initialized successfully via direct require')
+        return results
+      } catch (requireError) {
+        console.warn('❌ Direct require failed:', requireError instanceof Error ? requireError.message : 'Unknown error')
+      }
+
+      // Method 2: Try dynamic import (ES modules)
+      try {
+        const pdfParseModule = await import('pdf-parse')
+        // Handle default export
+        this.pdfParseModule = pdfParseModule.default || pdfParseModule
+        this.isServerSideInitialized = true
+        results.server = true
+        console.log('✅ PDF parsing initialized successfully via dynamic import')
+        return results
+      } catch (importError) {
+        console.warn('❌ Dynamic import failed:', importError instanceof Error ? importError.message : 'Unknown error')
+      }
+
+      // Method 3: Try createRequire (compatibility fallback)
+      try {
+        const { createRequire } = await import('module')
+        const require = createRequire(import.meta.url)
+        this.pdfParseModule = require('pdf-parse')
+        this.isServerSideInitialized = true
+        results.server = true
+        console.log('✅ PDF parsing initialized successfully via createRequire')
+        return results
+      } catch (createRequireError) {
+        console.warn('❌ createRequire failed:', createRequireError instanceof Error ? createRequireError.message : 'Unknown error')
+      }
+
+      // Method 4: Try alternative import approaches
+      try {
+        // Try importing from the exact path
+        // @ts-ignore - pdf-parse lib path may not have types
+        const pdfParseModule = await import('pdf-parse/lib/pdf-parse')
+        this.pdfParseModule = pdfParseModule.default || pdfParseModule
+        this.isServerSideInitialized = true
+        results.server = true
+        console.log('✅ PDF parsing initialized successfully via lib path import')
+        return results
+      } catch (libPathError) {
+        console.warn('❌ Lib path import failed:', libPathError instanceof Error ? libPathError.message : 'Unknown error')
+      }
+
+      // Method 5: Last resort - try to load from node_modules directly
+      try {
+        const path = await import('path')
+        const fs = await import('fs')
+        const nodeModulesPath = path.resolve(process.cwd(), 'node_modules', 'pdf-parse')
+        if (fs.existsSync(nodeModulesPath)) {
+          const pdfParseModule = await import(nodeModulesPath)
+          this.pdfParseModule = pdfParseModule.default || pdfParseModule
+          this.isServerSideInitialized = true
+          results.server = true
+          console.log('✅ PDF parsing initialized successfully via node_modules path')
+          return results
         }
+      } catch (nodeModulesError) {
+        console.warn('❌ Node modules path import failed:', nodeModulesError instanceof Error ? nodeModulesError.message : 'Unknown error')
       }
 
-      // Convert File to ArrayBuffer
-      const arrayBuffer = await file.arrayBuffer()
-      const buffer = Buffer.from(arrayBuffer)
-
-      // Parse PDF using the module
-      const pdfData = await this.pdfParseModule(buffer)
-
-      const extractedData: ExtractedPdfData = {
-        rawText: pdfData.text || '',
-        pageCount: pdfData.numpages || 0,
-        metadata: {
-          title: pdfData.info?.Title,
-          author: pdfData.info?.Author,
-          subject: pdfData.info?.Subject,
-          creator: pdfData.info?.Creator,
-          producer: pdfData.info?.Producer,
-          creationDate: pdfData.info?.CreationDate
-            ? new Date(pdfData.info.CreationDate)
-            : undefined,
-          modificationDate: pdfData.info?.ModDate
-            ? new Date(pdfData.info.ModDate)
-            : undefined,
-        },
-      }
-
-      return {
-        success: true,
-        data: extractedData,
-      }
-    } catch (error) {
-      console.error('PDF text extraction failed:', error)
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to extract text from PDF',
-      }
-    }
-  }
-
-  /**
-   * Extract structured data from PDF text using pattern matching
-   * This provides a fallback when LLM is not available
-   */
-  extractStructuredData(
-    rawText: string,
-  ): Partial<ExtractedPdfData['extractedFields']> {
-    const fields: Partial<ExtractedPdfData['extractedFields']> = {}
-
-    try {
-      // Sample name patterns
-      const sampleNamePatterns = [
-        /sample\s*(?:name|id)?:?\s*([\w.\-]+)/i,
-        /name\s*of\s*sample:?\s*([\w.\-]+)/i,
-        /sample:?\s*([\w.\-]+)/i,
-        /specimen:?\s*([\w.\-]+)/i,
-      ]
-
-      // Submitter patterns
-      const submitterPatterns = [
-        /submitter:?\s*([\s\w,.-]+)/i,
-        /submitted\s*by:?\s*([\s\w,.-]+)/i,
-        /contact\s*person:?\s*([\s\w,.-]+)/i,
-        /principal\s*investigator:?\s*([\s\w,.-]+)/i,
-        /pi:?\s*([\s\w,.-]+)/i,
-        /investigator:?\s*([\s\w,.-]+)/i,
-      ]
-
-      // Email patterns
-      const emailPatterns = [
-        /email:?\s*([\w%+.-]+@[\d.a-z-]+\.[a-z]{2,})/i,
-        /e-mail:?\s*([\w%+.-]+@[\d.a-z-]+\.[a-z]{2,})/i,
-        /contact\s*email:?\s*([\w%+.-]+@[\d.a-z-]+\.[a-z]{2,})/i,
-        /([\w%+.-]+@[\d.a-z-]+\.[a-z]{2,})/i,
-      ]
-
-      // Lab patterns
-      const labPatterns = [
-        /lab:?\s*([\s\w&(),.\-]+)/i,
-        /laboratory:?\s*([\s\w&(),.\-]+)/i,
-        /department:?\s*([\s\w&(),.\-]+)/i,
-        /institution:?\s*([\s\w&(),.\-]+)/i,
-        /facility:?\s*([\s\w&(),.\-]+)/i,
-      ]
-
-      // Project patterns
-      const projectPatterns = [
-        /project:?\s*([\s\w&(),.\-]+)/i,
-        /project\s*name:?\s*([\s\w&(),.\-]+)/i,
-        /study:?\s*([\s\w&(),.\-]+)/i,
-        /research:?\s*([\s\w&(),.\-]+)/i,
-      ]
-
-      // Sequencing type patterns
-      const sequencingPatterns = [
-        /sequencing\s*type:?\s*([\s\w\-]+)/i,
-        /platform:?\s*([\s\w\-]+)/i,
-        /technology:?\s*([\s\w\-]+)/i,
-        /method:?\s*([\s\w\-]+)/i,
-      ]
-
-      // Library type patterns
-      const libraryPatterns = [
-        /library\s*type:?\s*([\s\w\-]+)/i,
-        /library\s*prep:?\s*([\s\w\-]+)/i,
-        /preparation:?\s*([\s\w\-]+)/i,
-        /prep\s*method:?\s*([\s\w\-]+)/i,
-      ]
-
-      // Flow cell patterns
-      const flowCellPatterns = [
-        /flow\s*cell:?\s*([\s\w\-]+)/i,
-        /cell\s*type:?\s*([\s\w\-]+)/i,
-        /flowcell:?\s*([\s\w\-]+)/i,
-      ]
-
-      // Priority patterns
-      const priorityPatterns = [
-        /priority:?\s*(high|medium|low|standard|rush|urgent)/i,
-        /urgency:?\s*(high|medium|low|standard|rush|urgent)/i,
-        /processing\s*priority:?\s*(high|medium|low|standard|rush|urgent)/i,
-      ]
-
-      // Extract fields using patterns
-      for (const pattern of sampleNamePatterns) {
-        const match = rawText.match(pattern)
-        if (match && match[1] && match[1].trim().length > 0) {
-          fields.sampleName = match[1].trim()
-          break
+      console.error('❌ All PDF parsing initialization methods failed')
+      console.log('Available methods tried: direct require, dynamic import, createRequire, lib path, node_modules path')
+      
+      // Log debugging information
+      try {
+        const fs = await import('fs')
+        const path = await import('path')
+        const nodeModulesPath = path.resolve(process.cwd(), 'node_modules')
+        console.log('Current working directory:', process.cwd())
+        console.log('Node modules exists:', fs.existsSync(nodeModulesPath))
+        if (fs.existsSync(nodeModulesPath)) {
+          const pdfParseExists = fs.existsSync(path.join(nodeModulesPath, 'pdf-parse'))
+          console.log('pdf-parse directory exists:', pdfParseExists)
+          if (pdfParseExists) {
+            const pdfParsePackage = path.join(nodeModulesPath, 'pdf-parse', 'package.json')
+            if (fs.existsSync(pdfParsePackage)) {
+              const packageContent = fs.readFileSync(pdfParsePackage, 'utf8')
+              const packageJson = JSON.parse(packageContent)
+              console.log('pdf-parse version:', packageJson.version)
+              console.log('pdf-parse main:', packageJson.main)
+            }
+          }
         }
-      }
-
-      for (const pattern of submitterPatterns) {
-        const match = rawText.match(pattern)
-        if (match && match[1] && match[1].trim().length > 1) {
-          fields.submitterName = match[1].trim()
-          break
-        }
-      }
-
-      for (const pattern of emailPatterns) {
-        const match = rawText.match(pattern)
-        if (match && match[1] && match[1].includes('@')) {
-          fields.submitterEmail = match[1].trim()
-          break
-        }
-      }
-
-      for (const pattern of labPatterns) {
-        const match = rawText.match(pattern)
-        if (match && match[1] && match[1].trim().length > 2) {
-          fields.labName = match[1].trim()
-          break
-        }
-      }
-
-      for (const pattern of projectPatterns) {
-        const match = rawText.match(pattern)
-        if (match && match[1] && match[1].trim().length > 2) {
-          fields.projectName = match[1].trim()
-          break
-        }
-      }
-
-      for (const pattern of sequencingPatterns) {
-        const match = rawText.match(pattern)
-        if (match && match[1] && match[1].trim().length > 2) {
-          fields.sequencingType = match[1].trim()
-          break
-        }
-      }
-
-      for (const pattern of libraryPatterns) {
-        const match = rawText.match(pattern)
-        if (match && match[1] && match[1].trim().length > 2) {
-          fields.libraryType = match[1].trim()
-          break
-        }
-      }
-
-      for (const pattern of flowCellPatterns) {
-        const match = rawText.match(pattern)
-        if (match && match[1] && match[1].trim().length > 2) {
-          fields.flowCellType = match[1].trim()
-          break
-        }
-      }
-
-      for (const pattern of priorityPatterns) {
-        const match = rawText.match(pattern)
-        if (match && match[1] && match[1].trim().length > 2) {
-          fields.priority = match[1].trim()
-          break
-        }
-      }
-
-      // Calculate confidence based on how many fields we extracted
-      const totalFields = 9 // Total possible fields
-      const extractedCount = Object.keys(fields).length
-      fields.confidence = Math.min(extractedCount / totalFields, 0.8) // Cap at 80% for pattern matching
-
-      return fields
-    } catch (error) {
-      console.error('Structured data extraction failed:', error)
-      return { confidence: 0 }
-    }
-  }
-
-  /**
-   * Validate extracted data quality
-   */
-  validateExtractedData(
-    fields: Partial<ExtractedPdfData['extractedFields']> | undefined,
-  ): {
-    isValid: boolean
-    issues: string[]
-    confidence: number
-  } {
-    const issues: string[] = []
-    let confidence = fields?.confidence || 0
-
-    // Check email format
-    if (fields?.submitterEmail) {
-      const emailRegex = /^[\w%+.-]+@[\d.A-Za-z-]+\.[A-Za-z]{2,}$/
-      if (!emailRegex.test(fields.submitterEmail)) {
-        issues.push('Invalid email format')
-        confidence *= 0.8
+      } catch (debugError) {
+        console.error('Debug info failed:', debugError instanceof Error ? debugError.message : 'Unknown error')
       }
     }
 
-    // Check sample name format
-    if (fields?.sampleName) {
-      if (fields.sampleName.length < 2) {
-        issues.push('Sample name too short')
-        confidence *= 0.9
-      }
-    }
-
-    // Check submitter name
-    if (fields?.submitterName) {
-      if (fields.submitterName.length < 2) {
-        issues.push('Submitter name too short')
-        confidence *= 0.9
-      }
-    }
-
-    return {
-      isValid: issues.length === 0,
-      issues,
-      confidence: Math.max(confidence, 0.1), // Minimum confidence
-    }
+    return results
   }
 
   /**
    * Check if PDF parsing is available
    */
   async isAvailable(): Promise<boolean> {
-    return await this.initializePdfParse()
+    const results = await this.initializePdfParsers()
+    return results.server
+  }
+
+  /**
+   * Extract text from PDF using only pdf-parse (server-side)
+   */
+  async extractText(
+    file: File,
+    options: PdfExtractionOptions = {}
+  ): Promise<PdfExtractionResult> {
+    const { onProgress } = options
+    
+    // Create simple progress tracker
+    const tracker = new PdfProgressTracker()
+    if (onProgress) {
+      tracker.onProgress(onProgress)
+    }
+
+    try {
+      tracker.start()
+      tracker.updateStep(ProcessingStep.INITIALIZING, 0, 'Initializing PDF parser...')
+      
+      const { server } = await this.initializePdfParsers()
+      
+      if (!server) {
+        tracker.error('PDF parsing is not available. Please ensure pdf-parse is installed.')
+        return {
+          success: false,
+          error: 'PDF parsing is not available. Please ensure pdf-parse is installed.'
+        }
+      }
+
+      tracker.updateStep(ProcessingStep.INITIALIZING, 100, 'PDF parser initialized')
+
+      // Only use server-side parsing with pdf-parse
+      if (this.isServerSide && this.pdfParseModule) {
+        return await this.extractWithPdfParse(file, tracker)
+      }
+
+      // If we're on client-side, return error
+      tracker.error('PDF parsing is only available on the server in lightweight version')
+      return {
+        success: false,
+        error: 'PDF parsing is only available on the server in lightweight version'
+      }
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      tracker.error(`PDF extraction failed: ${errorMessage}`)
+      
+      return {
+        success: false,
+        error: `PDF extraction failed: ${errorMessage}`
+      }
+    }
+  }
+
+  /**
+   * Extract text using pdf-parse (server-side only)
+   */
+  private async extractWithPdfParse(
+    file: File,
+    tracker: PdfProgressTracker
+  ): Promise<PdfExtractionResult> {
+    return withPdfRetry(async () => {
+      tracker.updateStep(ProcessingStep.EXTRACTING_TEXT, 0, 'Extracting text from PDF...')
+      
+      try {
+        // Convert File to Buffer for pdf-parse
+        const arrayBuffer = await file.arrayBuffer()
+        const buffer = Buffer.from(arrayBuffer)
+        
+        // Extract text using pdf-parse
+        const result = await this.pdfParseModule(buffer)
+        
+        tracker.updateStep(ProcessingStep.EXTRACTING_TEXT, 50, 'Text extraction completed')
+        tracker.updateStep(ProcessingStep.PATTERN_MATCHING, 0, 'Extracting structured data...')
+        
+        // Extract structured data using pattern matching
+        const extractedFields = pdfPatternMatcher.extractAllFields(result.text)
+        
+        tracker.updateStep(ProcessingStep.PATTERN_MATCHING, 100, 'Pattern matching completed')
+       
+        // Build metadata from pdf-parse result
+        const metadata = this.buildMetadata(result.info || {})
+        
+        // Convert pattern matching results to our format with proper typing
+        const sampleName = extractedFields.sampleName?.[0]?.value
+        const submitterName = extractedFields.submitterName?.[0]?.value
+        const submitterEmail = extractedFields.submitterEmail?.[0]?.value
+        const labName = extractedFields.labName?.[0]?.value
+        const projectName = extractedFields.projectName?.[0]?.value
+        const sequencingType = extractedFields.sequencingType?.[0]?.value
+        const sampleType = extractedFields.sampleType?.[0]?.value
+        const libraryType = extractedFields.libraryType?.[0]?.value
+        const flowCellType = extractedFields.flowCellType?.[0]?.value
+        const priority = extractedFields.priority?.[0]?.value
+        
+        // Calculate confidence
+        const totalFields = 10
+        const extractedCount = [sampleName, submitterName, submitterEmail, labName, projectName, 
+                               sequencingType, sampleType, libraryType, flowCellType, priority]
+                               .filter(Boolean).length
+        const confidence = extractedCount / totalFields
+        
+        // Build extractedFields object conditionally
+        const extractedFieldsData: ExtractedPdfData['extractedFields'] = {
+          confidence
+        }
+        
+        // Only add fields if they have values
+        if (sampleName) extractedFieldsData.sampleName = sampleName
+        if (submitterName) extractedFieldsData.submitterName = submitterName
+        if (submitterEmail) extractedFieldsData.submitterEmail = submitterEmail
+        if (labName) extractedFieldsData.labName = labName
+        if (projectName) extractedFieldsData.projectName = projectName
+        if (sequencingType) extractedFieldsData.sequencingType = sequencingType
+        if (sampleType) extractedFieldsData.sampleType = sampleType
+        if (libraryType) extractedFieldsData.libraryType = libraryType
+        if (flowCellType) extractedFieldsData.flowCellType = flowCellType
+        if (priority) extractedFieldsData.priority = priority
+        
+        const extractedData: ExtractedPdfData = {
+          rawText: result.text,
+          pageCount: result.numpages || 1,
+          metadata,
+          extractedFields: extractedFieldsData
+        }
+
+        tracker.complete('PDF processing completed successfully')
+        
+        return {
+          success: true,
+          data: extractedData
+        }
+        
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        tracker.error(`PDF extraction failed: ${errorMessage}`)
+        
+        throw createPdfError(
+          PdfErrorType.PARSER_ERROR,
+          `pdf-parse extraction failed: ${errorMessage}`,
+          { fileName: file.name, fileSize: file.size }
+        )
+      }
+    })
+  }
+
+  /**
+   * Extract structured data from raw text (helper method)
+   */
+  extractStructuredData(rawText: string): any {
+    return pdfPatternMatcher.extractAllFields(rawText)
   }
 }
 

@@ -1,0 +1,327 @@
+---
+# Quota-Optimized Service Mesh Integration
+# Based on resourcequota-default-quota.yaml constraints:
+# - Pods: 9/10 used (1 available)
+# - Services: 10/10 used (0 available - CRITICAL CONSTRAINT)
+# - Secrets: 21/50 used (29 available)
+# - Storage: 4Gi/5Gi used (1Gi available)
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nanopore-tracking-app
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    version: v1
+    service-mesh: enabled
+spec:
+  replicas: 1  # Only 1 pod available in quota
+  selector:
+    matchLabels:
+      app: nanopore-tracking-app
+  template:
+    metadata:
+      labels:
+        app: nanopore-tracking-app
+        version: v1
+        service-mesh: enabled
+      annotations:
+        # Service mesh configuration via annotations (no sidecar injection due to resource constraints)
+        service-mesh.io/circuit-breaker: "enabled"
+        service-mesh.io/retry-policy: "3"
+        service-mesh.io/timeout: "30s"
+        service-mesh.io/load-balancer: "round-robin"
+        service-mesh.io/health-check: "enabled"
+        service-mesh.io/metrics: "enabled"
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3001"
+        prometheus.io/path: "/api/metrics"
+    spec:
+      containers:
+      - name: nanopore-tracking-app
+        image: nanopore-tracking-app:latest
+        ports:
+        - containerPort: 3001
+          name: http
+          protocol: TCP
+        - containerPort: 8080
+          name: metrics
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: SERVICE_MESH_ENABLED
+          value: "true"
+        - name: SERVICE_MESH_MODE
+          value: "integrated"  # No sidecar, integrated mode
+        - name: CIRCUIT_BREAKER_ENABLED
+          value: "true"
+        - name: LOAD_BALANCER_STRATEGY
+          value: "round-robin"
+        - name: HEALTH_CHECK_INTERVAL
+          value: "30s"
+        - name: METRICS_ENABLED
+          value: "true"
+        - name: TRACING_ENABLED
+          value: "false"  # Disabled to save resources
+        - name: MUTUAL_TLS_ENABLED
+          value: "false"  # Disabled to save resources
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+            ephemeral-storage: "100Mi"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+            ephemeral-storage: "200Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        # Service mesh health check endpoint
+        startupProbe:
+          httpGet:
+            path: /api/service-mesh/health
+            port: 3001
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 30
+        volumeMounts:
+        - name: service-mesh-config
+          mountPath: /app/config/service-mesh
+          readOnly: true
+        - name: app-storage
+          mountPath: /app/data
+          subPath: nanopore-data
+      volumes:
+      - name: service-mesh-config
+        configMap:
+          name: service-mesh-config
+      - name: app-storage
+        persistentVolumeClaim:
+          claimName: nanopore-storage-pvc
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+
+---
+# ConfigMap for service mesh configuration (uses available secrets quota)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-mesh-config
+  namespace: dept-barc
+data:
+  service-mesh.yaml: |
+    serviceMesh:
+      enabled: true
+      mode: "integrated"
+      features:
+        circuitBreaker:
+          enabled: true
+          failureThreshold: 5
+          timeout: 30s
+          halfOpenRequests: 3
+        loadBalancer:
+          strategy: "round-robin"
+          healthCheck:
+            enabled: true
+            interval: 30s
+            timeout: 5s
+            path: "/health"
+        retry:
+          enabled: true
+          maxAttempts: 3
+          backoff: "exponential"
+          initialDelay: 100ms
+        metrics:
+          enabled: true
+          port: 8080
+          path: "/metrics"
+          interval: 15s
+        tracing:
+          enabled: false  # Disabled to save resources
+        mutualTLS:
+          enabled: false  # Disabled to save resources
+      routing:
+        rules:
+          - match:
+              headers:
+                x-canary-user: "true"
+            route:
+              destination: "nanopore-tracking-app"
+              weight: 100
+          - match:
+              path: "/api/*"
+            route:
+              destination: "nanopore-tracking-app"
+              weight: 100
+              timeout: 60s
+      resilience:
+        timeout: 30s
+        retry:
+          attempts: 3
+          backoff: "exponential"
+        circuitBreaker:
+          enabled: true
+          threshold: 5
+          timeout: 30s
+
+---
+# Service Monitor for Prometheus (reuses existing service)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nanopore-service-mesh-monitor
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    service-mesh: enabled
+spec:
+  selector:
+    matchLabels:
+      app: nanopore-tracking-app
+  endpoints:
+  - port: http
+    path: /api/metrics
+    interval: 30s
+    scrapeTimeout: 10s
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+
+---
+# Horizontal Pod Autoscaler (disabled due to pod quota constraint)
+# apiVersion: autoscaling/v2
+# kind: HorizontalPodAutoscaler
+# metadata:
+#   name: nanopore-tracking-app-hpa
+#   namespace: dept-barc
+# spec:
+#   scaleTargetRef:
+#     apiVersion: apps/v1
+#     kind: Deployment
+#     name: nanopore-tracking-app
+#   minReplicas: 1
+#   maxReplicas: 1  # Cannot scale due to pod quota
+#   metrics:
+#   - type: Resource
+#     resource:
+#       name: cpu
+#       target:
+#         type: Utilization
+#         averageUtilization: 70
+#   - type: Resource
+#     resource:
+#       name: memory
+#       target:
+#         type: Utilization
+#         averageUtilization: 80
+
+---
+# Network Policy for service mesh security
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: nanopore-service-mesh-policy
+  namespace: dept-barc
+spec:
+  podSelector:
+    matchLabels:
+      app: nanopore-tracking-app
+      service-mesh: enabled
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: dept-barc
+    - podSelector:
+        matchLabels:
+          app: nanopore-tracking-app
+    ports:
+    - protocol: TCP
+      port: 3001
+    - protocol: TCP
+      port: 8080
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: dept-barc
+    ports:
+    - protocol: TCP
+      port: 5432  # PostgreSQL
+    - protocol: TCP
+      port: 3001  # Self communication
+  - to: []  # Allow external traffic (DNS, etc.)
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+
+---
+# Resource Quota Monitoring Alert
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: quota-monitoring-alerts
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    service-mesh: enabled
+spec:
+  groups:
+  - name: quota.alerts
+    rules:
+    - alert: PodQuotaExceeded
+      expr: kube_resourcequota{resource="pods", type="used"} / kube_resourcequota{resource="pods", type="hard"} > 0.9
+      for: 5m
+      labels:
+        severity: warning
+        service: nanopore-tracking-app
+      annotations:
+        summary: "Pod quota usage is high"
+        description: "Pod quota usage is {{ $value | humanizePercentage }} in namespace {{ $labels.namespace }}"
+    
+    - alert: ServiceQuotaExceeded
+      expr: kube_resourcequota{resource="services", type="used"} / kube_resourcequota{resource="services", type="hard"} >= 1.0
+      for: 1m
+      labels:
+        severity: critical
+        service: nanopore-tracking-app
+      annotations:
+        summary: "Service quota completely exhausted"
+        description: "Service quota is completely used in namespace {{ $labels.namespace }}. Cannot create new services."
+    
+    - alert: MemoryQuotaHigh
+      expr: kube_resourcequota{resource="requests.memory", type="used"} / kube_resourcequota{resource="requests.memory", type="hard"} > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        service: nanopore-tracking-app
+      annotations:
+        summary: "Memory quota usage is high"
+        description: "Memory quota usage is {{ $value | humanizePercentage }} in namespace {{ $labels.namespace }}" 

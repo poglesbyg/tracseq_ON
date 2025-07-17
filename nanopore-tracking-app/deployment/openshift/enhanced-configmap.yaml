@@ -1,0 +1,69 @@
+---
+# Enhanced ConfigMap with comprehensive configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nanopore-config-enhanced
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    component: config
+    deployment-type: enhanced
+data:
+  # Application configuration
+  app-name: "Nanopore Tracking App"
+  log-level: "info"
+  environment: "production"
+  
+  # AI service configuration
+  ollama-host: "http://ollama-service:11434"
+  ai-enabled: "true"
+  ai-timeout: "60000"
+  
+  # Database configuration
+  db-pool-min: "2"
+  db-pool-max: "8"
+  db-connection-timeout: "10000"
+  db-idle-timeout: "30000"
+  db-query-timeout: "30000"
+  
+  # Service mesh configuration
+  service-mesh-enabled: "true"
+  service-mesh-mode: "full"
+  circuit-breaker-enabled: "true"
+  load-balancer-strategy: "round-robin"
+  health-check-interval: "30s"
+  metrics-enabled: "true"
+  tracing-enabled: "true"
+  
+  # Security configuration
+  security-hardening-enabled: "true"
+  mutual-tls-enabled: "true"
+  
+  # Monitoring configuration
+  monitoring-enabled: "true"
+  metrics-port: "8080"
+  metrics-path: "/api/metrics"
+  prometheus-scrape: "true"
+  
+  # Performance tuning
+  node-options: "--max-old-space-size=256"
+  memory-optimization-enabled: "true"
+  gc-optimization-enabled: "true"
+  
+  # Application-specific settings
+  pdf-processing-timeout: "30000"
+  ai-processing-timeout: "60000"
+  upload-max-size: "52428800"  # 50MB
+  
+  # Cache configuration
+  cache-enabled: "true"
+  cache-ttl: "300"
+  cache-max-size: "1000"
+  
+  # Scaling configuration
+  auto-scaling-enabled: "true"
+  min-replicas: "2"
+  max-replicas: "5"
+  target-cpu-utilization: "70"
+  target-memory-utilization: "80" 

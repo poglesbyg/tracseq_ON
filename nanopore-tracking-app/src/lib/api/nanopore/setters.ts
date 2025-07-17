@@ -5,22 +5,19 @@ import type {
   NanoporeAttachment,
   DB,
   JsonValue,
-} from '@app/db/types'
-import type { Selectable, Insertable, Updateable, Kysely } from 'kysely'
+} from '../../db/types'
+import type { Selectable, Insertable, Updateable, Kysely, Transaction } from 'kysely'
 
+// Input types for creating new records
 export interface CreateNanoporeSampleInput extends Insertable<NanoporeSample> {}
-export interface CreateNanoporeSampleDetailInput
-  extends Insertable<NanoporeSampleDetail> {}
-export interface CreateNanoporeProcessingStepInput
-  extends Insertable<NanoporeProcessingStep> {}
-export interface CreateNanoporeAttachmentInput
-  extends Insertable<NanoporeAttachment> {}
+export interface CreateNanoporeSampleDetailInput extends Insertable<NanoporeSampleDetail> {}
+export interface CreateNanoporeProcessingStepInput extends Insertable<NanoporeProcessingStep> {}
+export interface CreateNanoporeAttachmentInput extends Insertable<NanoporeAttachment> {}
 
+// Input types for updating existing records
 export interface UpdateNanoporeSampleInput extends Updateable<NanoporeSample> {}
-export interface UpdateNanoporeSampleDetailInput
-  extends Updateable<NanoporeSampleDetail> {}
-export interface UpdateNanoporeProcessingStepInput
-  extends Updateable<NanoporeProcessingStep> {}
+export interface UpdateNanoporeSampleDetailInput extends Updateable<NanoporeSampleDetail> {}
+export interface UpdateNanoporeProcessingStepInput extends Updateable<NanoporeProcessingStep> {}
 
 /**
  * Create a new nanopore sample
@@ -29,121 +26,123 @@ export async function createNanoporeSample(
   db: Kysely<DB>,
   sampleData: CreateNanoporeSampleInput,
 ): Promise<Selectable<NanoporeSample>> {
+  const now = new Date().toISOString()
+  
   return await db
-    .insertInto('nanoporeSamples')
-    .values(sampleData)
+    .insertInto('nanopore_samples')
+    .values({
+      ...sampleData,
+      created_at: now,
+      updated_at: now,
+    })
     .returningAll()
     .executeTakeFirstOrThrow()
 }
 
 /**
- * Create nanopore sample with details in a transaction
+ * Create a new nanopore sample with details
  */
 export async function createNanoporeSampleWithDetails(
   db: Kysely<DB>,
   sampleData: CreateNanoporeSampleInput,
-  detailsData: Omit<CreateNanoporeSampleDetailInput, 'sampleId'>,
-): Promise<{
-  sample: Selectable<NanoporeSample>
-  details: Selectable<NanoporeSampleDetail>
-}> {
-  return await db.transaction().execute(async (trx) => {
-    const sample = await trx
-      .insertInto('nanoporeSamples')
-      .values(sampleData)
-      .returningAll()
-      .executeTakeFirstOrThrow()
+  detailsData: CreateNanoporeSampleDetailInput,
+): Promise<{ sample: Selectable<NanoporeSample>; details: Selectable<NanoporeSampleDetail> }> {
+  const now = new Date().toISOString()
+  
+  const sample = await db
+    .insertInto('nanopore_samples')
+    .values({
+      ...sampleData,
+      created_at: now,
+      updated_at: now,
+    })
+    .returningAll()
+    .executeTakeFirstOrThrow()
 
-    const details = await trx
-      .insertInto('nanoporeSampleDetails')
-      .values({
-        ...detailsData,
-        sampleId: sample.id,
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow()
+  const details = await db
+    .insertInto('nanopore_sample_details')
+    .values({
+      ...detailsData,
+      sample_id: sample.id,
+      created_at: now,
+      updated_at: now,
+    })
+    .returningAll()
+    .executeTakeFirstOrThrow()
 
-    return { sample, details }
-  })
+  return { sample, details }
 }
 
 /**
- * Update nanopore sample
+ * Update an existing nanopore sample
  */
 export async function updateNanoporeSample(
   db: Kysely<DB>,
   sampleId: string,
-  userId: string,
   updateData: UpdateNanoporeSampleInput,
 ): Promise<Selectable<NanoporeSample>> {
-  return await db
-    .updateTable('nanoporeSamples')
-    .set(updateData)
-    .where('id', '=', sampleId)
-    .where('createdBy', '=', userId)
-    .returningAll()
-    .executeTakeFirstOrThrow()
-}
-
-/**
- * Update nanopore sample status
- */
-export async function updateNanoporeSampleStatus(
-  db: Kysely<DB>,
-  sampleId: string,
-  userId: string,
-  status: string,
-): Promise<Selectable<NanoporeSample>> {
-  const updateData: UpdateNanoporeSampleInput = {
-    status,
-    ...(status === 'prep' && { startedAt: new Date() }),
-    ...(status === 'completed' && { completedAt: new Date() }),
+  const now = new Date().toISOString()
+  
+  const finalUpdateData = {
+    ...updateData,
+    updated_at: now,
   }
 
   return await db
-    .updateTable('nanoporeSamples')
-    .set(updateData)
+    .updateTable('nanopore_samples')
+    .set(finalUpdateData)
     .where('id', '=', sampleId)
-    .where('createdBy', '=', userId)
     .returningAll()
     .executeTakeFirstOrThrow()
 }
 
 /**
- * Assign nanopore sample to team member
+ * Update sample status
  */
-export async function assignNanoporeSample(
+export async function updateSampleStatus(
+  db: Kysely<DB>,
+  sampleId: string,
+  status: 'submitted' | 'prep' | 'sequencing' | 'analysis' | 'completed' | 'archived',
+): Promise<Selectable<NanoporeSample>> {
+  const now = new Date().toISOString()
+  
+  return await db
+    .updateTable('nanopore_samples')
+    .set({
+      status,
+      updated_at: now,
+    })
+    .where('id', '=', sampleId)
+    .returningAll()
+    .executeTakeFirstOrThrow()
+}
+
+/**
+ * Assign sample to team member
+ */
+export async function assignSample(
   db: Kysely<DB>,
   sampleId: string,
   assignedTo: string,
   libraryPrepBy?: string,
 ): Promise<Selectable<NanoporeSample>> {
-  const updateData: UpdateNanoporeSampleInput = {
-    assignedTo,
-    ...(libraryPrepBy && { libraryPrepBy }),
+  const now = new Date().toISOString()
+  
+  const updateData: any = {
+    assigned_to: assignedTo,
+    updated_at: now,
+  }
+
+  if (libraryPrepBy) {
+    updateData.library_prep_by = libraryPrepBy
   }
 
   return await db
-    .updateTable('nanoporeSamples')
+    .updateTable('nanopore_samples')
     .set(updateData)
     .where('id', '=', sampleId)
     .returningAll()
     .executeTakeFirstOrThrow()
-}
-
-/**
- * Delete nanopore sample
- */
-export async function deleteNanoporeSample(
-  db: Kysely<DB>,
-  sampleId: string,
-  userId: string,
-): Promise<void> {
-  await db
-    .deleteFrom('nanoporeSamples')
-    .where('id', '=', sampleId)
-    .where('createdBy', '=', userId)
-    .execute()
 }
 
 /**
@@ -153,9 +152,15 @@ export async function createNanoporeSampleDetails(
   db: Kysely<DB>,
   detailsData: CreateNanoporeSampleDetailInput,
 ): Promise<Selectable<NanoporeSampleDetail>> {
+  const now = new Date().toISOString()
+  
   return await db
-    .insertInto('nanoporeSampleDetails')
-    .values(detailsData)
+    .insertInto('nanopore_sample_details')
+    .values({
+      ...detailsData,
+      created_at: now,
+      updated_at: now,
+    })
     .returningAll()
     .executeTakeFirstOrThrow()
 }
@@ -168,10 +173,15 @@ export async function updateNanoporeSampleDetails(
   sampleId: string,
   updateData: UpdateNanoporeSampleDetailInput,
 ): Promise<Selectable<NanoporeSampleDetail>> {
+  const now = new Date().toISOString()
+  
   return await db
-    .updateTable('nanoporeSampleDetails')
-    .set(updateData)
-    .where('sampleId', '=', sampleId)
+    .updateTable('nanopore_sample_details')
+    .set({
+      ...updateData,
+      updated_at: now,
+    })
+    .where('sample_id', '=', sampleId)
     .returningAll()
     .executeTakeFirstOrThrow()
 }
@@ -183,9 +193,15 @@ export async function createProcessingStep(
   db: Kysely<DB>,
   stepData: CreateNanoporeProcessingStepInput,
 ): Promise<Selectable<NanoporeProcessingStep>> {
+  const now = new Date().toISOString()
+  
   return await db
-    .insertInto('nanoporeProcessingSteps')
-    .values(stepData)
+    .insertInto('nanopore_processing_steps')
+    .values({
+      ...stepData,
+      created_at: now,
+      updated_at: now,
+    })
     .returningAll()
     .executeTakeFirstOrThrow()
 }
@@ -198,9 +214,14 @@ export async function updateProcessingStep(
   stepId: string,
   updateData: UpdateNanoporeProcessingStepInput,
 ): Promise<Selectable<NanoporeProcessingStep>> {
+  const now = new Date().toISOString()
+  
   return await db
-    .updateTable('nanoporeProcessingSteps')
-    .set(updateData)
+    .updateTable('nanopore_processing_steps')
+    .set({
+      ...updateData,
+      updated_at: now,
+    })
     .where('id', '=', stepId)
     .returningAll()
     .executeTakeFirstOrThrow()
@@ -213,59 +234,77 @@ export async function createDefaultProcessingSteps(
   db: Kysely<DB>,
   sampleId: string,
 ): Promise<Array<Selectable<NanoporeProcessingStep>>> {
+  const now = new Date().toISOString()
+  
   const defaultSteps = [
     {
-      sampleId,
-      stepName: 'Sample QC',
-      stepStatus: 'pending' as const,
-      estimatedDurationHours: 1,
+      sample_id: sampleId,
+      step_name: 'Sample QC',
+      step_status: 'pending' as const,
+      estimated_duration_hours: 1,
+      created_at: now,
+      updated_at: now,
     },
     {
-      sampleId,
-      stepName: 'Library Preparation',
-      stepStatus: 'pending' as const,
-      estimatedDurationHours: 4,
+      sample_id: sampleId,
+      step_name: 'Library Preparation',
+      step_status: 'pending' as const,
+      estimated_duration_hours: 4,
+      created_at: now,
+      updated_at: now,
     },
     {
-      sampleId,
-      stepName: 'Library QC',
-      stepStatus: 'pending' as const,
-      estimatedDurationHours: 1,
+      sample_id: sampleId,
+      step_name: 'Library QC',
+      step_status: 'pending' as const,
+      estimated_duration_hours: 1,
+      created_at: now,
+      updated_at: now,
     },
     {
-      sampleId,
-      stepName: 'Sequencing Setup',
-      stepStatus: 'pending' as const,
-      estimatedDurationHours: 1,
+      sample_id: sampleId,
+      step_name: 'Sequencing Setup',
+      step_status: 'pending' as const,
+      estimated_duration_hours: 1,
+      created_at: now,
+      updated_at: now,
     },
     {
-      sampleId,
-      stepName: 'Sequencing Run',
-      stepStatus: 'pending' as const,
-      estimatedDurationHours: 48,
+      sample_id: sampleId,
+      step_name: 'Sequencing Run',
+      step_status: 'pending' as const,
+      estimated_duration_hours: 48,
+      created_at: now,
+      updated_at: now,
     },
     {
-      sampleId,
-      stepName: 'Basecalling',
-      stepStatus: 'pending' as const,
-      estimatedDurationHours: 2,
+      sample_id: sampleId,
+      step_name: 'Basecalling',
+      step_status: 'pending' as const,
+      estimated_duration_hours: 2,
+      created_at: now,
+      updated_at: now,
     },
     {
-      sampleId,
-      stepName: 'Quality Assessment',
-      stepStatus: 'pending' as const,
-      estimatedDurationHours: 1,
+      sample_id: sampleId,
+      step_name: 'Quality Assessment',
+      step_status: 'pending' as const,
+      estimated_duration_hours: 1,
+      created_at: now,
+      updated_at: now,
     },
     {
-      sampleId,
-      stepName: 'Data Delivery',
-      stepStatus: 'pending' as const,
-      estimatedDurationHours: 1,
+      sample_id: sampleId,
+      step_name: 'Data Delivery',
+      step_status: 'pending' as const,
+      estimated_duration_hours: 1,
+      created_at: now,
+      updated_at: now,
     },
   ]
 
   return await db
-    .insertInto('nanoporeProcessingSteps')
+    .insertInto('nanopore_processing_steps')
     .values(defaultSteps)
     .returningAll()
     .execute()
@@ -277,23 +316,22 @@ export async function createDefaultProcessingSteps(
 export async function completeProcessingStep(
   db: Kysely<DB>,
   stepId: string,
-  notes?: string,
   resultsData?: JsonValue,
 ): Promise<Selectable<NanoporeProcessingStep>> {
-  const updateData: UpdateNanoporeProcessingStepInput = {
-    stepStatus: 'completed',
-    completedAt: new Date(),
+  const now = new Date().toISOString()
+  
+  const updateData: any = {
+    step_status: 'completed',
+    completed_at: now,
+    updated_at: now,
   }
 
-  if (notes) {
-    updateData.notes = notes
-  }
   if (resultsData) {
-    updateData.resultsData = resultsData
+    updateData.results_data = resultsData
   }
 
   return await db
-    .updateTable('nanoporeProcessingSteps')
+    .updateTable('nanopore_processing_steps')
     .set(updateData)
     .where('id', '=', stepId)
     .returningAll()
@@ -306,16 +344,17 @@ export async function completeProcessingStep(
 export async function startProcessingStep(
   db: Kysely<DB>,
   stepId: string,
-  assignedTo?: string,
 ): Promise<Selectable<NanoporeProcessingStep>> {
-  const updateData: UpdateNanoporeProcessingStepInput = {
-    stepStatus: 'in_progress',
-    startedAt: new Date(),
-    ...(assignedTo && { assignedTo }),
+  const now = new Date().toISOString()
+  
+  const updateData = {
+    step_status: 'in_progress' as const,
+    started_at: now,
+    updated_at: now,
   }
 
   return await db
-    .updateTable('nanoporeProcessingSteps')
+    .updateTable('nanopore_processing_steps')
     .set(updateData)
     .where('id', '=', stepId)
     .returningAll()
@@ -323,58 +362,71 @@ export async function startProcessingStep(
 }
 
 /**
- * Create attachment
+ * Create file attachment
  */
 export async function createAttachment(
   db: Kysely<DB>,
   attachmentData: CreateNanoporeAttachmentInput,
 ): Promise<Selectable<NanoporeAttachment>> {
+  const now = new Date().toISOString()
+  
   return await db
-    .insertInto('nanoporeAttachments')
-    .values(attachmentData)
+    .insertInto('nanopore_attachments')
+    .values({
+      ...attachmentData,
+      created_at: now,
+    })
     .returningAll()
     .executeTakeFirstOrThrow()
 }
 
 /**
- * Delete attachment
+ * Delete file attachment
  */
 export async function deleteAttachment(
   db: Kysely<DB>,
   attachmentId: string,
 ): Promise<void> {
   await db
-    .deleteFrom('nanoporeAttachments')
+    .deleteFrom('nanopore_attachments')
     .where('id', '=', attachmentId)
     .execute()
 }
 
 /**
- * Complete sample workflow - create sample with details and default steps
+ * Create complete nanopore sample with all related data
  */
-export async function createCompleteNanoporeSample(
+export async function createCompleteSample(
   db: Kysely<DB>,
   sampleData: CreateNanoporeSampleInput,
-  detailsData: Omit<CreateNanoporeSampleDetailInput, 'sampleId'>,
+  detailsData: CreateNanoporeSampleDetailInput,
 ): Promise<{
   sample: Selectable<NanoporeSample>
   details: Selectable<NanoporeSampleDetail>
   processingSteps: Array<Selectable<NanoporeProcessingStep>>
 }> {
-  return await db.transaction().execute(async (trx) => {
-    // Create the sample
+  return await db.transaction().execute(async (trx: Transaction<DB>) => {
+    const now = new Date().toISOString()
+    
+    // Create sample
     const sample = await trx
-      .insertInto('nanoporeSamples')
-      .values(sampleData)
+      .insertInto('nanopore_samples')
+      .values({
+        ...sampleData,
+        created_at: now,
+        updated_at: now,
+      })
       .returningAll()
       .executeTakeFirstOrThrow()
 
-    // Create sample details
+    // Create details
     const details = await trx
-      .insertInto('nanoporeSampleDetails')
+      .insertInto('nanopore_sample_details')
       .values({
         ...detailsData,
-        sampleId: sample.id,
+        sample_id: sample.id,
+        created_at: now,
+        updated_at: now,
       })
       .returningAll()
       .executeTakeFirstOrThrow()
@@ -382,57 +434,73 @@ export async function createCompleteNanoporeSample(
     // Create default processing steps
     const defaultSteps = [
       {
-        sampleId: sample.id,
-        stepName: 'Sample QC',
-        stepStatus: 'pending' as const,
-        estimatedDurationHours: 1,
+        sample_id: sample.id,
+        step_name: 'Sample QC',
+        step_status: 'pending' as const,
+        estimated_duration_hours: 1,
+        created_at: now,
+        updated_at: now,
       },
       {
-        sampleId: sample.id,
-        stepName: 'Library Preparation',
-        stepStatus: 'pending' as const,
-        estimatedDurationHours: 4,
+        sample_id: sample.id,
+        step_name: 'Library Preparation',
+        step_status: 'pending' as const,
+        estimated_duration_hours: 4,
+        created_at: now,
+        updated_at: now,
       },
       {
-        sampleId: sample.id,
-        stepName: 'Library QC',
-        stepStatus: 'pending' as const,
-        estimatedDurationHours: 1,
+        sample_id: sample.id,
+        step_name: 'Library QC',
+        step_status: 'pending' as const,
+        estimated_duration_hours: 1,
+        created_at: now,
+        updated_at: now,
       },
       {
-        sampleId: sample.id,
-        stepName: 'Sequencing Setup',
-        stepStatus: 'pending' as const,
-        estimatedDurationHours: 1,
+        sample_id: sample.id,
+        step_name: 'Sequencing Setup',
+        step_status: 'pending' as const,
+        estimated_duration_hours: 1,
+        created_at: now,
+        updated_at: now,
       },
       {
-        sampleId: sample.id,
-        stepName: 'Sequencing Run',
-        stepStatus: 'pending' as const,
-        estimatedDurationHours: 48,
+        sample_id: sample.id,
+        step_name: 'Sequencing Run',
+        step_status: 'pending' as const,
+        estimated_duration_hours: 48,
+        created_at: now,
+        updated_at: now,
       },
       {
-        sampleId: sample.id,
-        stepName: 'Basecalling',
-        stepStatus: 'pending' as const,
-        estimatedDurationHours: 2,
+        sample_id: sample.id,
+        step_name: 'Basecalling',
+        step_status: 'pending' as const,
+        estimated_duration_hours: 2,
+        created_at: now,
+        updated_at: now,
       },
       {
-        sampleId: sample.id,
-        stepName: 'Quality Assessment',
-        stepStatus: 'pending' as const,
-        estimatedDurationHours: 1,
+        sample_id: sample.id,
+        step_name: 'Quality Assessment',
+        step_status: 'pending' as const,
+        estimated_duration_hours: 1,
+        created_at: now,
+        updated_at: now,
       },
       {
-        sampleId: sample.id,
-        stepName: 'Data Delivery',
-        stepStatus: 'pending' as const,
-        estimatedDurationHours: 1,
+        sample_id: sample.id,
+        step_name: 'Data Delivery',
+        step_status: 'pending' as const,
+        estimated_duration_hours: 1,
+        created_at: now,
+        updated_at: now,
       },
     ]
 
     const processingSteps = await trx
-      .insertInto('nanoporeProcessingSteps')
+      .insertInto('nanopore_processing_steps')
       .values(defaultSteps)
       .returningAll()
       .execute()
@@ -442,5 +510,39 @@ export async function createCompleteNanoporeSample(
       details,
       processingSteps,
     }
+  })
+}
+
+/**
+ * Delete nanopore sample and all related data
+ */
+export async function deleteNanoporeSample(
+  db: Kysely<DB>,
+  sampleId: string,
+): Promise<void> {
+  await db.transaction().execute(async (trx: Transaction<DB>) => {
+    // Delete attachments first
+    await trx
+      .deleteFrom('nanopore_attachments')
+      .where('sample_id', '=', sampleId)
+      .execute()
+
+    // Delete processing steps
+    await trx
+      .deleteFrom('nanopore_processing_steps')
+      .where('sample_id', '=', sampleId)
+      .execute()
+
+    // Delete sample details
+    await trx
+      .deleteFrom('nanopore_sample_details')
+      .where('sample_id', '=', sampleId)
+      .execute()
+
+    // Delete sample
+    await trx
+      .deleteFrom('nanopore_samples')
+      .where('id', '=', sampleId)
+      .execute()
   })
 }

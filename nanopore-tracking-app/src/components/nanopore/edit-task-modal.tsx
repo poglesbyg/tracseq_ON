@@ -1,11 +1,6 @@
 import { 
   Edit, 
   Calendar, 
-  User, 
-  Mail, 
-  TestTube, 
-  Building, 
-  Flag,
   Save,
   X
 } from 'lucide-react'
@@ -18,8 +13,20 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription
 } from '../ui/dialog'
 import { Input } from '../ui/input'
+
+// Helper function to safely format dates
+const formatDate = (date: Date | string | null | undefined): string => {
+  if (!date) return 'Not available'
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date
+    return dateObj.toLocaleDateString()
+  } catch (error) {
+    return 'Invalid date'
+  }
+}
 
 type NanoporeSample = {
   id: string
@@ -88,6 +95,7 @@ export function EditTaskModal({
     e.preventDefault()
     if (!sample) return
 
+    // Required field validation
     if (
       !formData.sampleName.trim() ||
       !formData.submitterName.trim() ||
@@ -97,10 +105,42 @@ export function EditTaskModal({
       return
     }
 
-    // Validate email format
+    // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(formData.submitterEmail)) {
       toast.error('Please enter a valid email address')
+      return
+    }
+
+    // Sample name validation (alphanumeric, dashes, underscores)
+    const sampleNameRegex = /^[a-zA-Z0-9_-]+$/
+    if (!sampleNameRegex.test(formData.sampleName)) {
+      toast.error('Sample name can only contain letters, numbers, dashes, and underscores')
+      return
+    }
+
+    // Workflow status validation
+    const validStatusTransitions: Record<string, string[]> = {
+      'submitted': ['prep', 'archived'],
+      'prep': ['sequencing', 'submitted', 'archived'],
+      'sequencing': ['analysis', 'prep', 'archived'],
+      'analysis': ['completed', 'sequencing', 'archived'],
+      'completed': ['archived'],
+      'archived': []
+    }
+
+    const currentStatus = sample.status || 'submitted'
+    const newStatus = formData.status
+    const allowedTransitions = validStatusTransitions[currentStatus] || []
+    
+    if (newStatus !== currentStatus && !allowedTransitions.includes(newStatus)) {
+      toast.error(`Invalid status transition from ${currentStatus} to ${newStatus}`)
+      return
+    }
+
+    // Priority validation for urgent samples
+    if (formData.priority === 'urgent' && !formData.assignedTo.trim()) {
+      toast.error('Urgent samples must be assigned to a team member')
       return
     }
 
@@ -136,6 +176,9 @@ export function EditTaskModal({
             <Edit className="h-5 w-5" />
             Edit Sample
           </DialogTitle>
+          <DialogDescription>
+            Edit sample details and update processing information for {sample.sampleName}.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
@@ -338,7 +381,7 @@ export function EditTaskModal({
                 <div>
                   <p className="text-sm font-medium">Created</p>
                   <p className="text-sm text-muted-foreground">
-                    {sample.createdAt.toLocaleDateString()}
+                    {formatDate(sample.createdAt)}
                   </p>
                 </div>
               </div>
@@ -347,7 +390,7 @@ export function EditTaskModal({
                 <div>
                   <p className="text-sm font-medium">Last Updated</p>
                   <p className="text-sm text-muted-foreground">
-                    {sample.updatedAt.toLocaleDateString()}
+                    {formatDate(sample.updatedAt)}
                   </p>
                 </div>
               </div>

@@ -8,14 +8,19 @@ import { NanoporeApp } from '@/components/nanopore/nanopore-app'
     id="nanopore-loading"
     class="min-h-screen bg-background text-foreground flex items-center justify-center"
   >
-    <div class="flex items-center space-x-2">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary">
+    <div class="flex flex-col items-center space-y-4">
+      <div class="flex items-center space-x-2">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary">
+        </div>
+        <span class="text-lg">Loading Nanopore Dashboard...</span>
       </div>
-      <span class="text-lg">Loading Nanopore Dashboard...</span>
+      <p class="text-sm text-muted-foreground">
+        If this takes too long, please refresh the page.
+      </p>
     </div>
   </div>
   <div id="nanopore-app" style="display: none;">
-    <NanoporeApp client:only="react" />
+    <NanoporeApp client:load />
   </div>
 </Layout>
 
@@ -26,15 +31,44 @@ import { NanoporeApp } from '@/components/nanopore/nanopore-app'
     const appElement = document.getElementById('nanopore-app')
 
     if (loadingElement && appElement) {
-      // Wait for React component to mount
+      // Check if React has mounted by looking for rendered content
+      const checkReactMount = () => {
+        // Look for any React-rendered content
+        const hasReactContent = appElement.querySelector('[data-radix-ui-dialog-trigger]') || 
+                               appElement.querySelector('.max-w-7xl') ||
+                               appElement.querySelector('[class*="card"]')
+        
+        if (hasReactContent) {
+          // React has mounted successfully
+          loadingElement.style.display = 'none'
+          appElement.style.display = 'block'
+        } else {
+          // Check again in a moment
+          setTimeout(checkReactMount, 100)
+        }
+      }
+
+      // Start checking after a short delay
+      setTimeout(checkReactMount, 500)
+      
+      // Fallback: show app after 5 seconds regardless
       setTimeout(() => {
-        loadingElement.style.display = 'none'
-        appElement.style.display = 'block'
-      }, 1500)
+        if (loadingElement.style.display !== 'none') {
+          console.warn('React app may not have loaded properly, showing anyway')
+          loadingElement.style.display = 'none'
+          appElement.style.display = 'block'
+        }
+      }, 5000)
     }
   }
 
   // Run on page load
-  document.addEventListener('DOMContentLoaded', handleNanoporeLoad)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', handleNanoporeLoad)
+  } else {
+    handleNanoporeLoad()
+  }
+  
+  // Also handle Astro page transitions
   document.addEventListener('astro:page-load', handleNanoporeLoad)
 </script>

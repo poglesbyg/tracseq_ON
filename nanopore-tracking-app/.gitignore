@@ -1,0 +1,196 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build output
+dist/
+.astro/
+build/
+out/
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.test
+.env.development
+secrets/*.json
+!secrets/*.template
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+.nyc_output/
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variable files
+.env*
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# next.js build output
+.next
+
+# nuxt.js build output
+.nuxt
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# Temporary folders
+tmp/
+temp/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.sql.backup
+*.dump
+
+# Uploaded files
+uploads/
+deployment/openshift/secret.yaml
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+*.pid
+*.seed
+*.pid.lock
+
+# PostgreSQL
+*.pgsql
+*.backup
+*.sql.gz
+
+# Testing
+test-results/
+playwright-report/
+coverage/
+.nyc_output/
+
+# AI Models and Data
+*.model
+*.bin
+*.onnx
+models/
+embeddings/
+vector-store/
+
+# Backup files
+backups/
+*.backup
+*.bak
+migration-backups/
+
+# Microservices specific
+services/*/dist/
+services/*/build/
+services/*/node_modules/
+services/*/.env*
+
+# Monitoring and metrics
+prometheus-data/
+grafana-data/
+metrics/
+
+# PDF processing temporary files
+pdf-temp/
+extracted-text/
+
+# Performance profiling
+*.prof
+*.cpuprofile
+*.heapprofile
+
+# TypeScript
+*.tsbuildinfo
+
+# Astro
+.astro/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Vitest
+coverage/
+
+# Lock files (keeping pnpm-lock.yaml as it's the chosen package manager)
+package-lock.json
+yarn.lock
+
+# Service mesh certificates
+*.crt
+*.key
+*.pem
+ca-certificates/
+
+# OpenShift/Kubernetes secrets
+*.secret
+*.sealed-secret
+
+# Local development overrides
+docker-compose.local.yml
+config/local.json

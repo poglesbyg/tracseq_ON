@@ -1,0 +1,364 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nanopore-performance-monitor
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    monitoring: performance
+spec:
+  selector:
+    matchLabels:
+      app: nanopore-tracking-app
+  endpoints:
+  - port: http
+    path: /api/service-mesh/metrics
+    interval: 15s
+    scrapeTimeout: 10s
+    honorLabels: true
+  - port: http
+    path: /api/performance/metrics
+    interval: 30s
+    scrapeTimeout: 15s
+    honorLabels: true
+  - port: http
+    path: /health
+    interval: 60s
+    scrapeTimeout: 30s
+    honorLabels: true
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: nanopore-performance-alerts
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    monitoring: performance
+spec:
+  groups:
+  - name: nanopore.performance.rules
+    interval: 30s
+    rules:
+    # Memory Usage Alerts
+    - alert: HighMemoryUsage
+      expr: |
+        (
+          nanopore_memory_heap_used_bytes / nanopore_memory_heap_total_bytes * 100
+        ) > 80
+      for: 2m
+      labels:
+        severity: warning
+        component: memory
+      annotations:
+        summary: "High memory usage detected"
+        description: "Memory usage is {{ $value }}% which is above 80% threshold"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/memory"
+    
+    - alert: CriticalMemoryUsage
+      expr: |
+        (
+          nanopore_memory_heap_used_bytes / nanopore_memory_heap_total_bytes * 100
+        ) > 90
+      for: 1m
+      labels:
+        severity: critical
+        component: memory
+      annotations:
+        summary: "Critical memory usage detected"
+        description: "Memory usage is {{ $value }}% which is above 90% threshold"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/memory"
+    
+    # CPU Usage Alerts
+    - alert: HighCPUUsage
+      expr: nanopore_cpu_usage_percentage > 70
+      for: 5m
+      labels:
+        severity: warning
+        component: cpu
+      annotations:
+        summary: "High CPU usage detected"
+        description: "CPU usage is {{ $value }}% which is above 70% threshold"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/cpu"
+    
+    - alert: CriticalCPUUsage
+      expr: nanopore_cpu_usage_percentage > 85
+      for: 2m
+      labels:
+        severity: critical
+        component: cpu
+      annotations:
+        summary: "Critical CPU usage detected"
+        description: "CPU usage is {{ $value }}% which is above 85% threshold"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/cpu"
+    
+    # Event Loop Alerts
+    - alert: HighEventLoopDelay
+      expr: nanopore_event_loop_delay_ms > 50
+      for: 3m
+      labels:
+        severity: warning
+        component: event-loop
+      annotations:
+        summary: "High event loop delay detected"
+        description: "Event loop delay is {{ $value }}ms which is above 50ms threshold"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/event-loop"
+    
+    # Service Mesh Alerts
+    - alert: CircuitBreakerOpen
+      expr: nanopore_circuit_breaker_state == 1
+      for: 1m
+      labels:
+        severity: warning
+        component: service-mesh
+      annotations:
+        summary: "Circuit breaker is open"
+        description: "Service mesh circuit breaker is open, requests are being rejected"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/circuit-breaker"
+    
+    - alert: HighRetryRate
+      expr: rate(nanopore_retries_total[5m]) > 5
+      for: 2m
+      labels:
+        severity: warning
+        component: service-mesh
+      annotations:
+        summary: "High retry rate detected"
+        description: "Retry rate is {{ $value }} per second which is above 5/sec threshold"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/retries"
+    
+    - alert: LoadBalancerUnhealthy
+      expr: nanopore_load_balancer_healthy_endpoints < 1
+      for: 1m
+      labels:
+        severity: critical
+        component: service-mesh
+      annotations:
+        summary: "Load balancer has no healthy endpoints"
+        description: "Load balancer has {{ $value }} healthy endpoints, service may be unavailable"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/load-balancer"
+    
+    # Request Rate Alerts
+    - alert: HighErrorRate
+      expr: |
+        (
+          rate(nanopore_requests_failed_total[5m]) / 
+          rate(nanopore_requests_total[5m]) * 100
+        ) > 5
+      for: 3m
+      labels:
+        severity: warning
+        component: requests
+      annotations:
+        summary: "High error rate detected"
+        description: "Error rate is {{ $value }}% which is above 5% threshold"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/error-rate"
+    
+    - alert: LowRequestRate
+      expr: rate(nanopore_requests_total[5m]) < 0.1
+      for: 10m
+      labels:
+        severity: info
+        component: requests
+      annotations:
+        summary: "Low request rate detected"
+        description: "Request rate is {{ $value }} per second which is below 0.1/sec threshold"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/request-rate"
+    
+    # Response Time Alerts
+    - alert: HighResponseTime
+      expr: |
+        histogram_quantile(0.95, 
+          rate(nanopore_request_duration_seconds_bucket[5m])
+        ) > 2
+      for: 5m
+      labels:
+        severity: warning
+        component: performance
+      annotations:
+        summary: "High response time detected"
+        description: "95th percentile response time is {{ $value }}s which is above 2s threshold"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/response-time"
+    
+    # Quota Usage Alerts
+    - alert: ApproachingMemoryQuota
+      expr: |
+        (
+          nanopore_memory_rss_bytes / (128 * 1024 * 1024) * 100
+        ) > 75
+      for: 5m
+      labels:
+        severity: warning
+        component: quota
+      annotations:
+        summary: "Approaching memory quota limit"
+        description: "Memory usage is {{ $value }}% of quota limit"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/quota"
+    
+    - alert: ApproachingCPUQuota
+      expr: |
+        (
+          nanopore_cpu_usage_percentage / 100 * 100
+        ) > 75
+      for: 5m
+      labels:
+        severity: warning
+        component: quota
+      annotations:
+        summary: "Approaching CPU quota limit"
+        description: "CPU usage is {{ $value }}% of quota limit"
+        runbook_url: "https://docs.nanopore-tracking.com/runbooks/quota"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: performance-dashboard-config
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    component: monitoring
+data:
+  dashboard.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Nanopore Tracking Performance Dashboard",
+        "tags": ["nanopore", "performance", "service-mesh"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Memory Usage",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "nanopore_memory_heap_used_bytes / 1024 / 1024",
+                "legendFormat": "Heap Used (MB)"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "MB",
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": 0},
+                    {"color": "yellow", "value": 80},
+                    {"color": "red", "value": 100}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 2,
+            "title": "CPU Usage",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "nanopore_cpu_usage_percentage",
+                "legendFormat": "CPU Usage (%)"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": 0},
+                    {"color": "yellow", "value": 70},
+                    {"color": "red", "value": 85}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 3,
+            "title": "Request Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(nanopore_requests_total[5m])",
+                "legendFormat": "Requests/sec"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Response Time",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.50, rate(nanopore_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "50th percentile"
+              },
+              {
+                "expr": "histogram_quantile(0.95, rate(nanopore_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "95th percentile"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Service Mesh Status",
+            "type": "table",
+            "targets": [
+              {
+                "expr": "nanopore_circuit_breaker_state",
+                "legendFormat": "Circuit Breaker State"
+              },
+              {
+                "expr": "nanopore_load_balancer_healthy_endpoints",
+                "legendFormat": "Healthy Endpoints"
+              }
+            ]
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s"
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: performance-optimization-config
+  namespace: dept-barc
+  labels:
+    app: nanopore-tracking-app
+    component: performance
+data:
+  optimization.yaml: |
+    performance:
+      memory:
+        heap_limit_mb: 128
+        gc_threshold_percent: 80
+        cleanup_interval_seconds: 300
+      cpu:
+        throttle_threshold_percent: 70
+        max_concurrent_requests: 50
+        request_timeout_seconds: 30
+      event_loop:
+        delay_threshold_ms: 50
+        monitoring_interval_seconds: 10
+      service_mesh:
+        circuit_breaker:
+          failure_threshold: 5
+          timeout_seconds: 60
+          half_open_max_calls: 3
+        retry:
+          max_attempts: 3
+          backoff_multiplier: 2
+          max_delay_seconds: 30
+        load_balancer:
+          health_check_interval_seconds: 10
+          unhealthy_threshold: 3
+          healthy_threshold: 2
+      monitoring:
+        metrics_retention_hours: 24
+        alert_evaluation_interval_seconds: 30
+        dashboard_refresh_seconds: 30 

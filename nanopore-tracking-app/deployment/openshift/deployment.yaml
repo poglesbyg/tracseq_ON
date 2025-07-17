@@ -14,14 +14,35 @@ spec:
       labels:
         app: nanopore-tracking-app
     spec:
+      initContainers:
+      - name: setup-storage
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          mkdir -p /app/data/cache /app/data/logs
+          ls -la /app/data
+          ls -la /app/uploads
+        volumeMounts:
+        - name: uploads-storage
+          mountPath: /app/uploads
+        - name: app-data-storage
+          mountPath: /app/data
+        securityContext:
+          runAsUser: 1003220000
       containers:
       - name: nanopore-tracking-app
-        image: nanopore-tracking-app:latest
+        image: image-registry.openshift-image-registry.svc:5000/dept-barc/nanopore-tracking-app:latest
         ports:
         - containerPort: 3001
         env:
         - name: NODE_ENV
           value: "production"
+        - name: PORT
+          value: "3001"
+        - name: HOST
+          value: "0.0.0.0"
         - name: DATABASE_URL
           valueFrom:
             secretKeyRef:
@@ -32,25 +53,128 @@ spec:
             configMapKeyRef:
               name: nanopore-config
               key: ollama-host
+        - name: BASE_URL
+          value: "https://nanopore-tracking-route-dept-barc.apps.cloudapps.unc.edu"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: nanopore-secrets
+              key: jwt-secret
+              optional: true
+        - name: SESSION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: nanopore-secrets
+              key: session-secret
+              optional: true
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: nanopore-secrets
+              key: encryption-key
+              optional: true
+        - name: ENABLE_AI_FEATURES
+          value: "true"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: UPLOAD_DIR
+          value: "/app/uploads"
+        - name: APP_DATA_DIR
+          value: "/app/data"
+        - name: CACHE_DIR
+          value: "/app/data/cache"
+        # Node.js memory optimization
+        - name: NODE_OPTIONS
+          value: "--max-old-space-size=256 --optimize-for-size --gc-interval=100"
+        - name: UV_THREADPOOL_SIZE
+          value: "4"
+        # Garbage collection optimization
+        - name: NODE_GC_INTERVAL
+          value: "100"
+        # Database connection pool optimization
+        - name: DB_POOL_MIN
+          value: "2"
+        - name: DB_POOL_MAX
+          value: "8"
+        - name: DB_POOL_IDLE_TIMEOUT
+          value: "20000"
+        # Memory cleanup settings
+        - name: MEMORY_CLEANUP_INTERVAL
+          value: "15000"
+        - name: CACHE_MAX_SIZE
+          value: "500"
+        - name: CACHE_TTL
+          value: "300000"
+        volumeMounts:
+        - name: uploads-storage
+          mountPath: /app/uploads
+        - name: temp-storage
+          mountPath: /tmp
+        - name: app-data-storage
+          mountPath: /app/data
+        securityContext:
+          runAsUser: 1003220000
         resources:
-          requests:
-            memory: "512Mi"
-            cpu: "250m"
           limits:
-            memory: "1Gi"
-            cpu: "500m"
+            memory: 384Mi  # Increased from 320Mi to 384Mi
+            cpu: 300m
+          requests:
+            memory: 192Mi  # Increased from 160Mi to 192Mi
+            cpu: 100m
         livenessProbe:
           httpGet:
             path: /health
             port: 3001
-          initialDelaySeconds: 30
-          periodSeconds: 10
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          failureThreshold: 3
+          successThreshold: 1
         readinessProbe:
           httpGet:
             path: /health
             port: 3001
-          initialDelaySeconds: 5
-          periodSeconds: 5
+          initialDelaySeconds: 20
+          periodSeconds: 15
+          failureThreshold: 5
+          successThreshold: 1
+      volumes:
+      - name: uploads-storage
+        persistentVolumeClaim:
+          claimName: nanopore-uploads-pvc
+      - name: temp-storage
+        emptyDir:
+          sizeLimit: 1Gi
+      - name: app-data-storage
+        persistentVolumeClaim:
+          claimName: nanopore-app-data-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nanopore-uploads-pvc
+  labels:
+    app: nanopore-tracking-app
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: snap
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nanopore-app-data-pvc
+  labels:
+    app: nanopore-tracking-app
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: snap
 ---
 apiVersion: v1
 kind: Service
@@ -63,7 +187,7 @@ spec:
     app: nanopore-tracking-app
   ports:
   - protocol: TCP
-    port: 80
+    port: 3001
     targetPort: 3001
   type: ClusterIP
 ---
